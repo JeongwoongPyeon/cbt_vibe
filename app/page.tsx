@@ -359,32 +359,36 @@ export default function Home() {
 
   if (!state) {
     return (
-      <main className="loading-screen">
-        <Loader2 className="spin" size={24} />
+      <main className="flex min-h-screen items-center justify-center gap-3 text-ink-secondary">
+        <Loader2 className="animate-spin" size={24} />
         <span>cbt_vibe</span>
       </main>
     );
   }
 
   return (
-    <main className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">cv</span>
+    <main className="grid min-h-screen grid-cols-[260px_minmax(0,1fr)] max-[1100px]:grid-cols-1">
+      <aside className="flex flex-col gap-6 border-r border-hairline bg-surface p-[18px_14px] max-[1100px]:sticky max-[1100px]:top-0 max-[1100px]:z-10 max-[1100px]:border-b max-[1100px]:border-r-0">
+        <div className="flex items-center gap-3 px-2 py-1.5">
+          <span className="flex size-[34px] items-center justify-center rounded-lg bg-ink text-[13px] font-bold text-on-primary">cv</span>
           <div>
-            <strong>cbt_vibe</strong>
-            <span>local study</span>
+            <strong className="block text-base leading-[1.3]">cbt_vibe</strong>
+            <span className="block text-xs leading-[1.33] text-ink-muted">local study</span>
           </div>
         </div>
 
-        <nav className="nav-list" aria-label="주요 메뉴">
+        <nav className="flex flex-col gap-1 max-[1100px]:grid max-[1100px]:grid-cols-3 max-[680px]:grid-cols-2" aria-label="주요 메뉴">
           {navItems.map((item) => {
             const Icon = item.icon;
 
             return (
               <button
                 key={item.key}
-                className={view === item.key ? "nav-item active" : "nav-item"}
+                className={
+                  view === item.key
+                    ? "relative flex min-h-[42px] w-full items-center gap-2.5 rounded-lg border-0 bg-canvas-soft px-3 py-2.5 text-left font-semibold text-ink before:absolute before:left-1 before:top-1/2 before:h-[18px] before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-primary"
+                    : "relative flex min-h-[42px] w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-2.5 text-left text-ink-secondary hover:bg-canvas-soft"
+                }
                 onClick={() => setView(item.key)}
                 type="button"
               >
@@ -395,52 +399,53 @@ export default function Home() {
           })}
         </nav>
 
-        <div className="provider-box">
-          <div className="provider-row">
+        <div className="mt-auto rounded-lg border border-hairline p-2.5 max-[1100px]:hidden">
+          <div className="grid min-h-7 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-[13px] text-ink-muted">
             <CircleDot size={14} />
             <span>OpenAI</span>
-            <b className={state.env.openaiConfigured ? "ok" : ""}>
+            <b className={state.env.openaiConfigured ? "text-[11px] text-accent-green" : "text-[11px] text-ink-faint"}>
               {state.env.openaiConfigured ? "ON" : "OFF"}
             </b>
           </div>
-          <div className="provider-row">
+          <div className="grid min-h-7 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-[13px] text-ink-muted">
             <CircleDot size={14} />
             <span>Gemini</span>
-            <b className={state.env.geminiConfigured ? "ok" : ""}>
+            <b className={state.env.geminiConfigured ? "text-[11px] text-accent-green" : "text-[11px] text-ink-faint"}>
               {state.env.geminiConfigured ? "ON" : "OFF"}
             </b>
           </div>
         </div>
       </aside>
 
-      <section className="workspace">
-        <header className="topbar">
+      <section className="flex min-w-0 flex-col gap-[18px] p-[18px] max-[680px]:p-3">
+        <header className="flex items-center justify-between gap-4 max-[680px]:flex-col max-[680px]:items-stretch">
           <div>
-            <p className="eyebrow">AI CBT MVP</p>
-            <h1>{navItems.find((item) => item.key === view)?.label}</h1>
+            <p className="m-0 text-xs font-semibold leading-[1.33] text-primary">AI CBT MVP</p>
+            <h1 className="m-0 text-[26px] leading-[1.23]">{navItems.find((item) => item.key === view)?.label}</h1>
           </div>
-          <div className="topbar-actions">
-            <label className="search-box">
+          <div className="flex items-center gap-2 max-[680px]:w-full">
+            <label className="flex min-h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-3 focus-within:border-primary focus-within:shadow-[rgba(0,117,222,0.14)_0_0_0_3px] max-[680px]:flex-1">
               <Search size={16} />
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
+                className="min-w-[210px] border-0 bg-transparent outline-none max-[680px]:min-w-0 max-[680px]:w-full"
                 placeholder="검색"
               />
             </label>
-            <button className="icon-button" onClick={() => void loadState()} title="새로고침" type="button">
+            <button className="inline-flex size-10 items-center justify-center rounded-full border border-hairline bg-surface" onClick={() => void loadState()} title="새로고침" type="button">
               <RefreshCw size={17} />
             </button>
-            <button className="icon-button" title="설정" type="button">
+            <button className="inline-flex size-10 items-center justify-center rounded-full border border-hairline bg-surface" title="설정" type="button">
               <Settings size={17} />
             </button>
           </div>
         </header>
 
         {statusMessage ? (
-          <div className="toast" role="status">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-hairline bg-surface px-3 py-2.5 text-sm text-ink-secondary shadow-soft" role="status">
             {statusMessage}
-            <button onClick={() => setStatusMessage("")} type="button" title="닫기">
+            <button className="flex items-center border-0 bg-transparent" onClick={() => setStatusMessage("")} type="button" title="닫기">
               <X size={14} />
             </button>
           </div>
@@ -519,56 +524,56 @@ export default function Home() {
 
 function DashboardView({ state, onStart }: { state: AppState; onStart: () => void }) {
   return (
-    <div className="content-grid dashboard-grid">
-      <section className="panel hero-panel">
+    <div className="grid gap-4 grid-cols-[1.2fr_0.8fr] max-[1100px]:grid-cols-1">
+      <section className="flex items-center justify-between rounded-lg border border-hairline bg-secondary p-5 text-on-primary max-[680px]:flex-col max-[680px]:items-stretch">
         <div>
-          <p className="eyebrow">오늘의 학습</p>
-          <h2>기록이 쌓일수록 오답 흐름이 선명해집니다.</h2>
+          <p className="m-0 text-xs font-semibold leading-[1.33] text-on-primary">오늘의 학습</p>
+          <h2 className="m-0 mt-1.5 max-w-[520px] text-[26px] leading-[1.23]">기록이 쌓일수록 오답 흐름이 선명해집니다.</h2>
         </div>
-        <button className="primary-button" onClick={onStart} type="button">
+        <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-primary px-4 font-medium text-on-primary active:bg-primary-active" onClick={onStart} type="button">
           <BookOpen size={18} />
           이어서 풀기
         </button>
       </section>
 
-      <section className="metrics">
+      <section className="grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
         <Metric label="문제" value={`${state.stats.totalQuestions}`} />
         <Metric label="풀이" value={`${state.stats.totalAttempts}`} />
         <Metric label="정답률" value={`${state.stats.accuracy}%`} />
         <Metric label="오답" value={`${state.stats.openWrongNotes}`} />
       </section>
 
-      <section className="panel">
+      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
         <PanelHeader title="최근 풀이" icon={History} />
-        <div className="list-table">
+        <div className="flex flex-col">
           {state.recentAttempts.length === 0 ? (
             <EmptyLine label="풀이 기록 없음" />
           ) : (
             state.recentAttempts.map((attempt) => (
-              <div className="table-row" key={attempt.id}>
-                <span className={attempt.isCorrect ? "dot correct" : "dot wrong"} />
-                <strong>{attempt.questionStem}</strong>
-                <span>{attempt.category}</span>
-                <b>{attempt.isCorrect ? "정답" : "오답"}</b>
+              <div className="grid min-h-12 grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2.5 border-t border-hairline py-2.5 max-[680px]:flex max-[680px]:flex-col max-[680px]:items-stretch max-[680px]:gap-1.5" key={attempt.id}>
+                <span className={attempt.isCorrect ? "inline-block size-2 rounded-full bg-accent-green" : "inline-block size-2 rounded-full bg-danger"} />
+                <strong className="overflow-hidden text-ellipsis whitespace-nowrap text-sm">{attempt.questionStem}</strong>
+                <span className="text-[13px] text-ink-muted">{attempt.category}</span>
+                <b className="text-[13px] text-ink-muted">{attempt.isCorrect ? "정답" : "오답"}</b>
               </div>
             ))
           )}
         </div>
       </section>
 
-      <section className="panel">
+      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
         <PanelHeader title="카테고리" icon={BadgeCheck} />
-        <div className="category-stack">
+        <div className="flex flex-col">
           {state.stats.categories.length === 0 ? (
             <EmptyLine label="카테고리 기록 없음" />
           ) : (
             state.stats.categories.map((category) => (
-              <div className="category-row" key={category.category}>
-                <span>{category.category}</span>
-                <div className="meter">
-                  <i style={{ width: `${category.accuracy}%` }} />
+              <div className="grid min-h-12 grid-cols-[minmax(90px,0.45fr)_1fr_auto] items-center gap-3 border-t border-hairline" key={category.category}>
+                <span className="text-sm">{category.category}</span>
+                <div className="h-2 overflow-hidden rounded-full bg-canvas-soft">
+                  <i className="block h-full bg-primary" style={{ width: `${category.accuracy}%` }} />
                 </div>
-                <b>{category.accuracy}%</b>
+                <b className="text-sm">{category.accuracy}%</b>
               </div>
             ))
           )}
@@ -600,61 +605,66 @@ function PracticeView({
   setSelectedAnswer: (answer: string) => void;
 }) {
   return (
-    <div className="practice-layout">
-      <section className="panel question-panel">
+    <div className="grid grid-cols-[minmax(0,1fr)_340px] gap-4 max-[1100px]:grid-cols-1">
+      <section className="min-h-[calc(100vh-120px)] min-w-0 rounded-lg border border-hairline bg-surface p-5 max-[1100px]:min-h-0">
         {activeQuestion ? (
           <>
-            <div className="question-meta">
+            <div className="flex flex-wrap gap-1.5">
               <Badge>{getQuestionTypeLabel(activeQuestion.type)}</Badge>
               <Badge>{activeQuestion.category}</Badge>
               <Badge>{activeQuestion.difficulty}</Badge>
             </div>
-            <h2 className="question-stem">{activeQuestion.stem}</h2>
+            <h2 className="m-[28px_0] text-2xl leading-[1.45]">{activeQuestion.stem}</h2>
 
             {activeQuestion.type === "short_answer" ? (
-              <label className="answer-input">
-                <span>답안</span>
+              <label className="flex flex-col gap-2">
+                <span className="text-[13px] text-ink-muted">답안</span>
                 <input
+                  className="min-h-[38px] w-full rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
                   value={selectedAnswer}
                   onChange={(event) => setSelectedAnswer(event.target.value)}
                   placeholder="정답 입력"
                 />
               </label>
             ) : (
-              <div className="choice-list">
+              <div className="grid gap-2.5">
                 {activeQuestion.choices.map((choice, index) => (
                   <button
-                    className={selectedAnswer === choice ? "choice selected" : "choice"}
+                    className={
+                      selectedAnswer === choice
+                        ? "grid min-h-14 w-full grid-cols-[34px_minmax(0,1fr)] items-center gap-3 rounded-lg border border-primary bg-surface px-3 py-2 text-left text-ink shadow-[rgba(0,117,222,0.16)_0_0_0_3px]"
+                        : "grid min-h-14 w-full grid-cols-[34px_minmax(0,1fr)] items-center gap-3 rounded-lg border border-hairline bg-surface px-3 py-2 text-left text-ink hover:border-primary"
+                    }
                     key={choice}
                     onClick={() => setSelectedAnswer(choice)}
                     type="button"
                   >
-                    <span>{index + 1}</span>
-                    <b>{choice}</b>
+                    <span className="flex size-8 items-center justify-center rounded-full bg-canvas-soft font-semibold">{index + 1}</span>
+                    <b className="font-medium leading-[1.45]">{choice}</b>
                   </button>
                 ))}
               </div>
             )}
 
             {answered ? (
-              <div className={answered.isCorrect ? "result-box correct" : "result-box wrong"}>
-                <strong>{answered.isCorrect ? "정답" : "오답"}</strong>
-                <span>정답: {answered.answer}</span>
-                {activeQuestion.explanation ? <p>{activeQuestion.explanation}</p> : null}
+              <div className={answered.isCorrect ? "mt-[18px] rounded-lg border border-[rgba(26,174,57,0.24)] bg-[#effaf1] p-3.5" : "mt-[18px] rounded-lg border border-[rgba(217,45,32,0.22)] bg-danger-soft p-3.5"}>
+                <strong className="block">{answered.isCorrect ? "정답" : "오답"}</strong>
+                <span className="block text-[15px] leading-[1.5]">정답: {answered.answer}</span>
+                {activeQuestion.explanation ? <p className="text-[15px] leading-[1.5]">{activeQuestion.explanation}</p> : null}
               </div>
             ) : null}
 
-            <div className="action-row">
+            <div className="mt-4 flex items-center gap-2">
               <button
-                className="primary-button"
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-primary px-4 font-medium text-on-primary active:bg-primary-active"
                 disabled={!selectedAnswer || busy}
                 onClick={onSubmit}
                 type="button"
               >
-                {busy ? <Loader2 className="spin" size={18} /> : <Check size={18} />}
+                {busy ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
                 채점
               </button>
-              <button className="utility-button" onClick={() => onGenerateSimilar(activeQuestion)} type="button">
+              <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-hairline bg-surface px-3.5 text-ink" onClick={() => onGenerateSimilar(activeQuestion)} type="button">
                 <Sparkles size={17} />
                 유사 문제
               </button>
@@ -665,18 +675,22 @@ function PracticeView({
         )}
       </section>
 
-      <aside className="panel question-list-panel">
+      <aside className="max-h-[calc(100vh-120px)] min-w-0 overflow-hidden rounded-lg border border-hairline bg-surface p-5 max-[1100px]:max-h-none">
         <PanelHeader title="문제 목록" icon={LibraryBig} />
-        <div className="question-list">
+        <div className="flex max-h-[calc(100vh-180px)] flex-col gap-1.5 overflow-auto">
           {filteredQuestions.map((question) => (
             <button
-              className={question.id === activeQuestion?.id ? "question-list-item active" : "question-list-item"}
+              className={
+                question.id === activeQuestion?.id
+                  ? "block w-full rounded-lg border border-hairline bg-canvas-soft p-2.5 text-left text-ink"
+                  : "block w-full rounded-lg border border-transparent bg-transparent p-2.5 text-left text-ink hover:border-hairline hover:bg-canvas-soft"
+              }
               key={question.id}
               onClick={() => onChoose(question.id)}
               type="button"
             >
-              <span>{question.category}</span>
-              <strong>{question.stem}</strong>
+              <span className="mb-1 block text-xs text-ink-muted">{question.category}</span>
+              <strong className="line-clamp-2 block text-sm font-medium leading-[1.38]">{question.stem}</strong>
             </button>
           ))}
         </div>
@@ -699,9 +713,9 @@ function WrongNotesView({
   onUpdate: (questionId: string, updates: Partial<WrongNote>) => void;
 }) {
   return (
-    <section className="panel full-panel">
+    <section className="min-h-[calc(100vh-120px)] min-w-0 rounded-lg border border-hairline bg-surface p-5 max-[1100px]:min-h-0">
       <PanelHeader title="오답노트" icon={NotebookTabs} />
-      <div className="wrong-list">
+      <div className="flex flex-col">
         {wrongNotes.length === 0 ? (
           <EmptyLine label="오답 기록 없음" />
         ) : (
@@ -713,26 +727,27 @@ function WrongNotesView({
             }
 
             return (
-              <article className="wrong-row" key={note.questionId}>
+              <article className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 border-t border-hairline py-4 max-[680px]:flex max-[680px]:flex-col max-[680px]:items-stretch" key={note.questionId}>
                 <div>
-                  <div className="question-meta">
+                  <div className="flex flex-wrap gap-1.5">
                     <Badge>{question.category}</Badge>
                     <Badge>{note.resolvedAt ? "해결" : "복습"}</Badge>
                     <Badge>{`${note.wrongCount}회`}</Badge>
                   </div>
-                  <h3>{question.stem}</h3>
+                  <h3 className="my-2.5 text-[17px] leading-[1.45]">{question.stem}</h3>
                   <textarea
+                    className="min-h-[74px] w-full resize-y rounded border border-hairline p-2"
                     value={note.memo}
                     onChange={(event) => onUpdate(note.questionId, { memo: event.target.value })}
                     placeholder="오답 메모"
                   />
                 </div>
-                <div className="row-actions">
-                  <button className="utility-button" onClick={() => onChoose(question.id)} type="button">
+                <div className="mt-4 flex items-center gap-2">
+                  <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-hairline bg-surface px-3.5 text-ink" onClick={() => onChoose(question.id)} type="button">
                     <BookOpen size={16} />
                     풀기
                   </button>
-                  <button className="utility-button" onClick={() => onGenerateSimilar(question)} type="button">
+                  <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-hairline bg-surface px-3.5 text-ink" onClick={() => onGenerateSimilar(question)} type="button">
                     <Sparkles size={16} />
                     확장
                   </button>
@@ -764,10 +779,10 @@ function QuestionBankView({
   const choiceCount = getChoiceCount(form.type);
 
   return (
-    <div className="bank-layout">
-      <section className="panel">
+    <div className="grid grid-cols-[minmax(0,1fr)_340px] gap-4 max-[1100px]:grid-cols-1">
+      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
         <PanelHeader title="문제 등록" icon={Plus} />
-        <div className="form-grid">
+        <div className="mb-3 grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
           <SelectField
             label="유형"
             value={form.type}
@@ -794,16 +809,17 @@ function QuestionBankView({
             onChange={(value) => setForm({ ...form, tags: value })}
           />
         </div>
-        <label className="field span-all">
-          <span>문제 지문</span>
+        <label className="mb-3 flex flex-col gap-1.5">
+          <span className="text-[13px] text-ink-muted">문제 지문</span>
           <textarea
+            className="min-h-[104px] w-full resize-y rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
             value={form.stem}
             onChange={(event) => setForm({ ...form, stem: event.target.value })}
           />
         </label>
 
         {choiceCount > 0 ? (
-          <div className="choice-editor">
+          <div className="mb-3 grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
             {Array.from({ length: choiceCount }).map((_, index) => (
               <TextField
                 key={index}
@@ -819,7 +835,7 @@ function QuestionBankView({
           </div>
         ) : null}
 
-        <div className="form-grid">
+        <div className="mb-3 grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
           <TextField
             label="정답"
             value={form.answer}
@@ -832,29 +848,30 @@ function QuestionBankView({
           />
         </div>
 
-        <label className="field span-all">
-          <span>해설</span>
+        <label className="mb-3 flex flex-col gap-1.5">
+          <span className="text-[13px] text-ink-muted">해설</span>
           <textarea
+            className="min-h-[104px] w-full resize-y rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
             value={form.explanation}
             onChange={(event) => setForm({ ...form, explanation: event.target.value })}
           />
         </label>
 
-        <div className="action-row">
-          <button className="primary-button" disabled={busy} onClick={onSave} type="button">
-            {busy ? <Loader2 className="spin" size={18} /> : <Save size={18} />}
+        <div className="mt-4 flex items-center gap-2">
+          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-primary px-4 font-medium text-on-primary active:bg-primary-active" disabled={busy} onClick={onSave} type="button">
+            {busy ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
             저장
           </button>
         </div>
       </section>
 
-      <section className="panel">
+      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
         <PanelHeader title="문제 은행" icon={LibraryBig} />
-        <div className="question-list tall">
+        <div className="flex max-h-[calc(100vh-220px)] flex-col gap-1.5 overflow-auto">
           {filteredQuestions.map((question) => (
-            <button className="question-list-item" key={question.id} onClick={() => onChoose(question.id)} type="button">
-              <span>{`${getQuestionTypeLabel(question.type)} · ${question.category}`}</span>
-              <strong>{question.stem}</strong>
+            <button className="block w-full rounded-lg border border-transparent bg-transparent p-2.5 text-left text-ink hover:border-hairline hover:bg-canvas-soft" key={question.id} onClick={() => onChoose(question.id)} type="button">
+              <span className="mb-1 block text-xs text-ink-muted">{`${getQuestionTypeLabel(question.type)} · ${question.category}`}</span>
+              <strong className="line-clamp-2 block text-sm font-medium leading-[1.38]">{question.stem}</strong>
             </button>
           ))}
         </div>
@@ -877,36 +894,37 @@ function ImportView({
   const validCount = preview.filter((item) => item.errors.length === 0).length;
 
   return (
-    <section className="panel full-panel">
+    <section className="min-h-[calc(100vh-120px)] min-w-0 rounded-lg border border-hairline bg-surface p-5 max-[1100px]:min-h-0">
       <PanelHeader title="엑셀 가져오기" icon={FileSpreadsheet} />
-      <label className="upload-zone">
+      <label className="relative flex min-h-[118px] items-center justify-center gap-2.5 rounded-xl border border-dashed border-ink-faint bg-canvas-soft text-ink-secondary">
         <FileSpreadsheet size={22} />
         <span>xlsx 파일 선택</span>
         <input
+          className="absolute inset-0 cursor-pointer opacity-0"
           accept=".xlsx,.xls"
           onChange={(event) => onFile(event.target.files?.[0] || null)}
           type="file"
         />
       </label>
 
-      <div className="preview-toolbar">
+      <div className="mt-4 flex items-center justify-between gap-2">
         <span>{`검증 통과 ${validCount} / ${preview.length}`}</span>
-        <button className="primary-button" disabled={validCount === 0 || busy} onClick={onSave} type="button">
-          {busy ? <Loader2 className="spin" size={18} /> : <Save size={18} />}
+        <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-primary px-4 font-medium text-on-primary active:bg-primary-active" disabled={validCount === 0 || busy} onClick={onSave} type="button">
+          {busy ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
           저장
         </button>
       </div>
 
-      <div className="import-table">
+      <div className="flex flex-col">
         {preview.length === 0 ? (
           <EmptyLine label="가져오기 대기" />
         ) : (
           preview.map((item) => (
-            <div className={item.errors.length ? "import-row invalid" : "import-row"} key={item.rowNumber}>
+            <div className={item.errors.length ? "grid min-h-[52px] grid-cols-[46px_92px_minmax(0,1fr)_minmax(120px,0.4fr)] items-center gap-3 border-t border-hairline max-[680px]:flex max-[680px]:flex-col max-[680px]:items-stretch max-[680px]:gap-1.5" : "grid min-h-[52px] grid-cols-[46px_92px_minmax(0,1fr)_minmax(120px,0.4fr)] items-center gap-3 border-t border-hairline max-[680px]:flex max-[680px]:flex-col max-[680px]:items-stretch max-[680px]:gap-1.5"} key={item.rowNumber}>
               <b>{item.rowNumber}</b>
-              <span>{getQuestionTypeLabel(item.question.type)}</span>
-              <strong>{item.question.stem || "빈 지문"}</strong>
-              <em>{item.errors.length ? item.errors.join(" ") : "OK"}</em>
+              <span className="text-[13px] text-ink-muted">{getQuestionTypeLabel(item.question.type)}</span>
+              <strong className="overflow-hidden text-ellipsis whitespace-nowrap">{item.question.stem || "빈 지문"}</strong>
+              <em className={item.errors.length ? "text-[13px] not-italic text-danger" : "text-[13px] not-italic text-ink-muted"}>{item.errors.length ? item.errors.join(" ") : "OK"}</em>
             </div>
           ))
         )}
@@ -935,10 +953,10 @@ function AiGenerateView({
   setForm: (form: AiForm) => void;
 }) {
   return (
-    <div className="ai-layout">
-      <section className="panel">
+    <div className="grid grid-cols-[minmax(0,1fr)_340px] gap-4 max-[1100px]:grid-cols-1">
+      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
         <PanelHeader title="AI 생성" icon={Brain} />
-        <div className="form-grid">
+        <div className="mb-3 grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
           <SelectField
             label="Provider"
             value={form.provider}
@@ -968,9 +986,10 @@ function AiGenerateView({
             value={form.difficulty}
             onChange={(value) => setForm({ ...form, difficulty: value })}
           />
-          <label className="field">
-            <span>개수</span>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[13px] text-ink-muted">개수</span>
             <input
+              className="min-h-[38px] w-full rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
               max={10}
               min={1}
               type="number"
@@ -991,21 +1010,22 @@ function AiGenerateView({
           />
         </div>
 
-        <label className="field span-all">
-          <span>요청</span>
+        <label className="mb-3 flex flex-col gap-1.5">
+          <span className="text-[13px] text-ink-muted">요청</span>
           <textarea
+            className="min-h-[104px] w-full resize-y rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
             value={form.instruction}
             onChange={(event) => setForm({ ...form, instruction: event.target.value })}
           />
         </label>
 
-        <div className="action-row">
-          <button className="primary-button" disabled={busy} onClick={onGenerate} type="button">
-            {busy ? <Loader2 className="spin" size={18} /> : <Sparkles size={18} />}
+        <div className="mt-4 flex items-center gap-2">
+          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-primary px-4 font-medium text-on-primary active:bg-primary-active" disabled={busy} onClick={onGenerate} type="button">
+            {busy ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
             생성
           </button>
           <button
-            className="utility-button"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-hairline bg-surface px-3.5 text-ink"
             disabled={generatedQuestions.length === 0 || busy}
             onClick={onSave}
             type="button"
@@ -1016,28 +1036,28 @@ function AiGenerateView({
         </div>
       </section>
 
-      <section className="panel">
+      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
         <PanelHeader title="검수 목록" icon={ClipboardList} />
-        <div className="generated-list">
+        <div className="flex max-h-[calc(100vh-180px)] flex-col gap-0 overflow-auto">
           {generatedQuestions.length === 0 ? (
             <EmptyLine label="생성 결과 없음" />
           ) : (
             generatedQuestions.map((question, index) => (
-              <article className="generated-row" key={`${question.stem}-${index}`}>
-                <div className="question-meta">
+              <article className="block border-t border-hairline py-4" key={`${question.stem}-${index}`}>
+                <div className="flex flex-wrap gap-1.5">
                   <Badge>{getQuestionTypeLabel(question.type)}</Badge>
                   <Badge>{question.category}</Badge>
                   <Badge>{question.difficulty}</Badge>
                 </div>
-                <h3>{question.stem}</h3>
+                <h3 className="my-2.5 text-[17px] leading-[1.45]">{question.stem}</h3>
                 {question.choices.length ? (
-                  <ol>
+                  <ol className="my-2.5 pl-[22px]">
                     {question.choices.map((choice) => (
                       <li key={choice}>{choice}</li>
                     ))}
                   </ol>
                 ) : null}
-                <p>
+                <p className="text-sm text-ink-secondary">
                   <b>정답</b> {question.answer}
                 </p>
               </article>
@@ -1051,30 +1071,30 @@ function AiGenerateView({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div className="min-h-[94px] rounded-lg border border-hairline bg-surface p-[18px]">
+      <span className="block text-[13px] text-ink-muted">{label}</span>
+      <strong className="mt-2.5 block text-3xl leading-[1.2]">{value}</strong>
     </div>
   );
 }
 
 function PanelHeader({ title, icon: Icon }: { title: string; icon: typeof ClipboardList }) {
   return (
-    <div className="panel-header">
-      <div>
+    <div className="mb-3.5 flex items-center justify-between">
+      <div className="flex items-center gap-2">
         <Icon size={18} />
-        <h2>{title}</h2>
+        <h2 className="m-0 text-lg leading-[1.33]">{title}</h2>
       </div>
     </div>
   );
 }
 
 function Badge({ children }: { children: React.ReactNode }) {
-  return <span className="badge">{children}</span>;
+  return <span className="inline-flex rounded-full bg-canvas-soft px-2 py-1 text-xs font-semibold leading-[1.33] text-ink-secondary">{children}</span>;
 }
 
 function EmptyLine({ label }: { label: string }) {
-  return <div className="empty-line">{label}</div>;
+  return <div className="flex min-h-[52px] items-center border-t border-hairline text-sm text-ink-muted">{label}</div>;
 }
 
 function TextField({
@@ -1087,9 +1107,9 @@ function TextField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="field">
-      <span>{label}</span>
-      <input value={value} onChange={(event) => onChange(event.target.value)} />
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[13px] text-ink-muted">{label}</span>
+      <input className="min-h-[38px] w-full rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]" value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
 }
@@ -1106,9 +1126,9 @@ function SelectField({
   options: Array<[string, string]>;
 }) {
   return (
-    <label className="field">
-      <span>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[13px] text-ink-muted">{label}</span>
+      <select className="min-h-[38px] w-full rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]" value={value} onChange={(event) => onChange(event.target.value)}>
         {options.map(([optionValue, labelText]) => (
           <option key={optionValue} value={optionValue}>
             {labelText}
