@@ -13,6 +13,7 @@ dist/
 build/
 .next/
 out/
+tsconfig.tsbuildinfo
 
 # Local app data
 .local/
