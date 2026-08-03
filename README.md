@@ -14,6 +14,7 @@ AI 기반 CBT(Computer Based Test) 풀이 사이트입니다.
 
 - `README.md`: 프로젝트 개요와 실행 준비 문서
 - `docs/DEVELOPMENT_PLAN.md`: AI CBT 사이트 개발 계획
+- `docs/DESIGN_SYSTEM.md`: Notion 계열 기반 디자인 시스템 가이드
 - `.env.example`: 필요한 환경변수 예시
 - `.gitignore`: 로컬 환경 파일, 의존성, 빌드 산출물 제외 규칙
 
