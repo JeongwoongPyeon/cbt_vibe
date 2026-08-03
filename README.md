@@ -13,6 +13,7 @@ AI 기반 CBT(Computer Based Test) 풀이 사이트입니다.
 이 저장소는 프로젝트 초기 설정 단계입니다.
 
 - `README.md`: 프로젝트 개요와 실행 준비 문서
+- `docs/DEVELOPMENT_PLAN.md`: AI CBT 사이트 개발 계획
 - `.env.example`: 필요한 환경변수 예시
 - `.gitignore`: 로컬 환경 파일, 의존성, 빌드 산출물 제외 규칙
 
