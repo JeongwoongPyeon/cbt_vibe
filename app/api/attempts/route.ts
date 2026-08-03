@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       mode: body.mode === "review" || body.mode === "exam" ? body.mode : "practice",
     });
 
-    return Response.json({ attempt, state: getAppState() });
+    return Response.json({ attempt, state: getAppState(attempt.examType) });
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "풀이 기록 저장에 실패했습니다." },
@@ -21,4 +21,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

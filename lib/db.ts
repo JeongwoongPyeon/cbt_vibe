@@ -6,19 +6,21 @@ import type {
   Attempt,
   AttemptMode,
   CategoryStat,
+  ExamType,
   EnvStatus,
   Question,
   QuestionDraft,
   RecentAttempt,
   WrongNote,
 } from "./types";
-import { normalizeForCompare, parseJsonList } from "./validation";
+import { normalizeExamType, normalizeForCompare, parseJsonList } from "./validation";
 
 const dbDir = path.join(process.cwd(), "local-data");
 const dbPath = path.join(dbDir, "cbt.sqlite");
 
 type QuestionRow = {
   id: string;
+  exam_type: ExamType;
   type: Question["type"];
   category: string;
   tags: string;
@@ -44,10 +46,12 @@ type AttemptRow = {
   created_at: string;
   question_stem?: string;
   category?: string;
+  exam_type?: ExamType;
 };
 
 type WrongNoteRow = {
   question_id: string;
+  exam_type?: ExamType;
   wrong_count: number;
   last_wrong_at: string;
   resolved_at: string | null;
@@ -85,6 +89,7 @@ function initializeDb(db: DatabaseSync): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS questions (
       id TEXT PRIMARY KEY,
+      exam_type TEXT NOT NULL DEFAULT 'computer_general',
       type TEXT NOT NULL,
       category TEXT NOT NULL,
       tags TEXT NOT NULL,
@@ -123,18 +128,19 @@ function initializeDb(db: DatabaseSync): void {
     );
   `);
 
-  const count = db.prepare("SELECT COUNT(*) AS count FROM questions").get() as {
-    count: number;
-  };
+  const questionColumns = db.prepare("PRAGMA table_info(questions)").all() as Array<{ name: string }>;
 
-  if (count.count === 0) {
-    seedQuestions(db);
+  if (!questionColumns.some((column) => column.name === "exam_type")) {
+    db.exec("ALTER TABLE questions ADD COLUMN exam_type TEXT NOT NULL DEFAULT 'computer_general'");
   }
+
+  seedQuestions(db);
 }
 
 function seedQuestions(db: DatabaseSync): void {
   const seeds: QuestionDraft[] = [
     {
+      examType: "computer_general",
       type: "multiple_choice_4",
       category: "정보처리 기초",
       tags: ["운영체제", "프로세스"],
@@ -148,6 +154,7 @@ function seedQuestions(db: DatabaseSync): void {
       sourceNote: "MVP 샘플",
     },
     {
+      examType: "computer_general",
       type: "multiple_choice_5",
       category: "데이터베이스",
       tags: ["정규화", "관계형 데이터베이스"],
@@ -161,6 +168,7 @@ function seedQuestions(db: DatabaseSync): void {
       sourceNote: "MVP 샘플",
     },
     {
+      examType: "computer_general",
       type: "short_answer",
       category: "웹",
       tags: ["HTTP", "상태 코드"],
@@ -173,16 +181,51 @@ function seedQuestions(db: DatabaseSync): void {
       sourceType: "manual",
       sourceNote: "MVP 샘플",
     },
+    {
+      examType: "ncs",
+      type: "multiple_choice_4",
+      category: "의사소통",
+      tags: ["NCS", "문제해결"],
+      difficulty: "기초",
+      stem: "NCS에서 주어진 정보를 목적에 맞게 해석하고 전달하는 능력과 가장 가까운 것은?",
+      choices: ["의사소통능력", "수리능력", "자원관리능력", "조직이해능력"],
+      answer: "의사소통능력",
+      acceptableAnswers: [],
+      explanation: "의사소통능력은 문서와 언어 정보를 정확하게 이해하고 상황에 맞게 표현하는 능력입니다.",
+      sourceType: "manual",
+      sourceNote: "MVP 샘플",
+    },
+    {
+      examType: "information_security",
+      type: "multiple_choice_5",
+      category: "접근통제",
+      tags: ["정보보호론", "인증"],
+      difficulty: "기초",
+      stem: "정보보호의 3요소 중 허가된 사용자가 필요한 시점에 정보에 접근할 수 있음을 의미하는 것은?",
+      choices: ["기밀성", "무결성", "가용성", "부인방지", "인증"],
+      answer: "가용성",
+      acceptableAnswers: [],
+      explanation: "가용성은 인가된 사용자가 필요할 때 정보와 시스템을 이용할 수 있도록 보장하는 속성입니다.",
+      sourceType: "manual",
+      sourceNote: "MVP 샘플",
+    },
   ];
 
   for (const seed of seeds) {
-    insertQuestion(seed, db);
+    const exists = db
+      .prepare("SELECT 1 FROM questions WHERE exam_type = ? LIMIT 1")
+      .get(seed.examType);
+
+    if (!exists) {
+      insertQuestion(seed, db);
+    }
   }
 }
 
 function questionFromRow(row: QuestionRow): Question {
   return {
     id: row.id,
+    examType: normalizeExamType(row.exam_type),
     type: row.type,
     category: row.category,
     tags: parseJsonList(row.tags),
@@ -203,6 +246,7 @@ function attemptFromRow(row: AttemptRow): Attempt {
   return {
     id: row.id,
     questionId: row.question_id,
+    examType: normalizeExamType(row.exam_type),
     selectedAnswer: row.selected_answer,
     isCorrect: row.is_correct === 1,
     elapsedSeconds: row.elapsed_seconds,
@@ -222,6 +266,7 @@ function recentAttemptFromRow(row: AttemptRow): RecentAttempt {
 function wrongNoteFromRow(row: WrongNoteRow): WrongNote {
   return {
     questionId: row.question_id,
+    examType: normalizeExamType(row.exam_type),
     wrongCount: row.wrong_count,
     lastWrongAt: row.last_wrong_at,
     resolvedAt: row.resolved_at,
@@ -237,12 +282,13 @@ export function insertQuestion(question: QuestionDraft, db = getDb()): Question 
 
   db.prepare(`
     INSERT INTO questions (
-      id, type, category, tags, difficulty, stem, choices, answer,
+      id, exam_type, type, category, tags, difficulty, stem, choices, answer,
       acceptable_answers, explanation, source_type, source_note, created_at, updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
+    question.examType,
     question.type,
     question.category,
     JSON.stringify(question.tags),
@@ -269,26 +315,38 @@ export function getQuestionById(id: string, db = getDb()): Question | null {
   return row ? questionFromRow(row) : null;
 }
 
-export function listQuestions(db = getDb()): Question[] {
+export function listQuestions(examType: ExamType, db = getDb()): Question[] {
   const rows = db
-    .prepare("SELECT * FROM questions ORDER BY created_at DESC")
-    .all() as QuestionRow[];
+    .prepare("SELECT * FROM questions WHERE exam_type = ? ORDER BY created_at DESC")
+    .all(examType) as QuestionRow[];
 
   return rows.map(questionFromRow);
 }
 
-export function listAttempts(db = getDb()): Attempt[] {
+export function listAttempts(examType: ExamType, db = getDb()): Attempt[] {
   const rows = db
-    .prepare("SELECT * FROM attempts ORDER BY created_at DESC")
-    .all() as AttemptRow[];
+    .prepare(`
+      SELECT attempts.*, questions.exam_type
+      FROM attempts
+      INNER JOIN questions ON questions.id = attempts.question_id
+      WHERE questions.exam_type = ?
+      ORDER BY attempts.created_at DESC
+    `)
+    .all(examType) as AttemptRow[];
 
   return rows.map(attemptFromRow);
 }
 
-export function listWrongNotes(db = getDb()): WrongNote[] {
+export function listWrongNotes(examType: ExamType, db = getDb()): WrongNote[] {
   const rows = db
-    .prepare("SELECT * FROM wrong_notes ORDER BY resolved_at IS NOT NULL, last_wrong_at DESC")
-    .all() as WrongNoteRow[];
+    .prepare(`
+      SELECT wrong_notes.*, questions.exam_type
+      FROM wrong_notes
+      INNER JOIN questions ON questions.id = wrong_notes.question_id
+      WHERE questions.exam_type = ?
+      ORDER BY resolved_at IS NOT NULL, last_wrong_at DESC
+    `)
+    .all(examType) as WrongNoteRow[];
 
   return rows.map(wrongNoteFromRow);
 }
@@ -346,7 +404,12 @@ export function recordAttempt(input: {
   }
 
   return attemptFromRow(
-    db.prepare("SELECT * FROM attempts WHERE id = ?").get(attemptId) as AttemptRow,
+    db.prepare(`
+      SELECT attempts.*, questions.exam_type
+      FROM attempts
+      INNER JOIN questions ON questions.id = attempts.question_id
+      WHERE attempts.id = ?
+    `).get(attemptId) as AttemptRow,
   );
 }
 
@@ -376,31 +439,39 @@ export function updateWrongNote(input: {
   );
 
   const row = db
-    .prepare("SELECT * FROM wrong_notes WHERE question_id = ?")
+    .prepare(`
+      SELECT wrong_notes.*, questions.exam_type
+      FROM wrong_notes
+      INNER JOIN questions ON questions.id = wrong_notes.question_id
+      WHERE wrong_notes.question_id = ?
+    `)
     .get(input.questionId) as WrongNoteRow;
 
   return wrongNoteFromRow(row);
 }
 
-export function getAppState(): AppState {
+export function getAppState(examType: ExamType = "ncs"): AppState {
   const db = getDb();
-  const questions = listQuestions(db);
-  const attempts = listAttempts(db);
-  const wrongNotes = listWrongNotes(db);
+  const questions = listQuestions(examType, db);
+  const attempts = listAttempts(examType, db);
+  const wrongNotes = listWrongNotes(examType, db);
   const recentAttempts = db
     .prepare(`
       SELECT
         attempts.*,
         questions.stem AS question_stem,
-        questions.category AS category
+        questions.category AS category,
+        questions.exam_type
       FROM attempts
       INNER JOIN questions ON questions.id = attempts.question_id
+      WHERE questions.exam_type = ?
       ORDER BY attempts.created_at DESC
       LIMIT 8
     `)
-    .all() as AttemptRow[];
+    .all(examType) as AttemptRow[];
 
   return {
+    examType,
     questions,
     attempts,
     wrongNotes,
@@ -480,4 +551,3 @@ function evaluateAnswer(question: Question, selectedAnswer: string): boolean {
 
   return Number.isInteger(numericAnswer) && selectedIndex === numericAnswer - 1;
 }
-

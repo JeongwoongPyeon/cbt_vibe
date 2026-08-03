@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { DraftValidation, QuestionDraft, QuestionType, SourceType } from "./types";
+import type { DraftValidation, ExamType, QuestionDraft, QuestionType, SourceType } from "./types";
+import { isExamType } from "./types";
 
 const questionTypeSchema = z.enum([
   "multiple_choice_4",
@@ -16,6 +17,7 @@ const sourceTypeSchema = z.enum([
 ]);
 
 const rawQuestionSchema = z.object({
+  examType: z.string().optional().catch("computer_general"),
   type: questionTypeSchema.catch("multiple_choice_4"),
   category: z.string().optional().catch("미분류"),
   tags: z.union([z.array(z.string()), z.string()]).optional().catch([]),
@@ -77,6 +79,10 @@ export function normalizeQuestionType(value: unknown): QuestionType {
   return "multiple_choice_4";
 }
 
+export function normalizeExamType(value: unknown): ExamType {
+  return isExamType(value) ? value : "computer_general";
+}
+
 export function normalizeTags(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.map((tag) => String(tag).trim()).filter(Boolean);
@@ -103,6 +109,7 @@ export function validateQuestionDraft(raw: unknown): DraftValidation {
   const parsed = rawQuestionSchema.safeParse(raw);
   const data = parsed.success ? parsed.data : rawQuestionSchema.parse({});
   const type = normalizeQuestionType(data.type);
+  const examType = normalizeExamType(data.examType);
   const errors: string[] = [];
   const requiredChoices = getChoiceCount(type);
   const stem = (data.stem || data.question || "").trim();
@@ -136,6 +143,7 @@ export function validateQuestionDraft(raw: unknown): DraftValidation {
   }
 
   const question: QuestionDraft = {
+    examType,
     type,
     category: (data.category || "").trim() || "미분류",
     tags: normalizeTags(data.tags),

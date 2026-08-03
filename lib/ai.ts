@@ -1,10 +1,12 @@
-import type { Question, QuestionDraft, QuestionType } from "./types";
-import { getQuestionTypeLabel, validateQuestionDraft } from "./validation";
+import { getExamTypeLabel } from "./types";
+import type { ExamType, Question, QuestionDraft, QuestionType } from "./types";
+import { normalizeExamType, getQuestionTypeLabel, validateQuestionDraft } from "./validation";
 
 type AiProvider = "openai" | "gemini";
 
 export interface GenerateQuestionsInput {
   provider: AiProvider;
+  examType: ExamType;
   category: string;
   difficulty: string;
   type: QuestionType;
@@ -28,7 +30,7 @@ export async function generateQuestions(
       ? await generateWithGemini(prompt)
       : await generateWithOpenAI(prompt);
 
-  return parseGeneratedQuestions(rawText);
+  return parseGeneratedQuestions(rawText, input.examType);
 }
 
 function buildGenerationPrompt(input: GenerateQuestionsInput): string {
@@ -50,6 +52,7 @@ function buildGenerationPrompt(input: GenerateQuestionsInput): string {
 아래 조건에 맞는 한국어 CBT 문제 ${input.count}개를 생성한다.
 
 조건:
+- 시험 종류: ${getExamTypeLabel(input.examType)}
 - 문제 유형: ${getQuestionTypeLabel(input.type)} (${input.type})
 - 카테고리: ${input.category || "미분류"}
 - 난이도: ${input.difficulty || "보통"}
@@ -170,7 +173,7 @@ function extractOpenAIText(json: Record<string, unknown>): string {
   return texts.join("\n");
 }
 
-function parseGeneratedQuestions(rawText: string): GenerateQuestionsResult {
+function parseGeneratedQuestions(rawText: string, examType: ExamType): GenerateQuestionsResult {
   const cleaned = rawText
     .replace(/^```(?:json)?/i, "")
     .replace(/```$/i, "")
@@ -192,7 +195,10 @@ function parseGeneratedQuestions(rawText: string): GenerateQuestionsResult {
     const questions: QuestionDraft[] = [];
 
     for (const item of items) {
-      const validation = validateQuestionDraft(item);
+      const validation = validateQuestionDraft({
+        ...(item as Record<string, unknown>),
+        examType: normalizeExamType((item as Record<string, unknown>).examType || examType),
+      });
 
       if (validation.ok) {
         questions.push(validation.question);
@@ -210,4 +216,3 @@ function parseGeneratedQuestions(rawText: string): GenerateQuestionsResult {
     };
   }
 }
-

@@ -22,7 +22,8 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
-import type { AppState, Question, QuestionDraft, QuestionType, WrongNote } from "@/lib/types";
+import { EXAM_TYPES } from "@/lib/types";
+import type { AppState, ExamType, Question, QuestionDraft, QuestionType, WrongNote } from "@/lib/types";
 import {
   getChoiceCount,
   getQuestionTypeLabel,
@@ -33,6 +34,7 @@ import {
 type ViewKey = "dashboard" | "practice" | "wrong" | "bank" | "import" | "ai";
 
 type ManualForm = {
+  examType: ExamType;
   type: QuestionType;
   category: string;
   difficulty: string;
@@ -52,6 +54,7 @@ type ImportPreview = {
 
 type AiForm = {
   provider: "openai" | "gemini";
+  examType: ExamType;
   type: QuestionType;
   category: string;
   difficulty: string;
@@ -61,6 +64,7 @@ type AiForm = {
 };
 
 const emptyManualForm: ManualForm = {
+  examType: "ncs",
   type: "multiple_choice_4",
   category: "정보처리 기초",
   difficulty: "보통",
@@ -87,6 +91,7 @@ const navItems: Array<{
 
 export default function Home() {
   const [state, setState] = useState<AppState | null>(null);
+  const [examType, setExamType] = useState<ExamType>("ncs");
   const [view, setView] = useState<ViewKey>("dashboard");
   const [activeQuestionId, setActiveQuestionId] = useState("");
   const [selectedAnswer, setSelectedAnswer] = useState("");
@@ -100,6 +105,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [aiForm, setAiForm] = useState<AiForm>({
     provider: "openai",
+    examType: "ncs",
     type: "multiple_choice_4",
     category: "정보처리 기초",
     difficulty: "보통",
@@ -109,8 +115,8 @@ export default function Home() {
   });
 
   useEffect(() => {
-    void loadState();
-  }, []);
+    void loadState(examType);
+  }, [examType]);
 
   useEffect(() => {
     if (!state || activeQuestionId) {
@@ -150,12 +156,18 @@ export default function Home() {
     );
   }, [searchTerm, state]);
 
-  async function loadState() {
-    const response = await fetch("/api/state", { cache: "no-store" });
+  async function loadState(nextExamType: ExamType = examType) {
+    const response = await fetch(`/api/state?examType=${encodeURIComponent(nextExamType)}`, { cache: "no-store" });
     const nextState = (await response.json()) as AppState;
     setState(nextState);
+    setExamType(nextState.examType);
+    setActiveQuestionId("");
+    setSelectedAnswer("");
+    setAnswered(null);
+    setManualForm((current) => ({ ...current, examType: nextState.examType }));
     setAiForm((current) => ({
       ...current,
+      examType: nextState.examType,
       provider: nextState.env.defaultProvider,
     }));
   }
@@ -181,6 +193,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           questionId: activeQuestion.id,
+          examType: activeQuestion.examType,
           selectedAnswer,
           elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
           mode: view === "wrong" ? "review" : "practice",
@@ -260,6 +273,7 @@ export default function Home() {
     const preview = rows.map((row, index) => {
       const validation = validateQuestionDraft({
         type: normalizeQuestionType(row.type),
+        examType,
         category: row.category,
         stem: row.question || row.stem,
         choices: [row.choice_1, row.choice_2, row.choice_3, row.choice_4, row.choice_5]
@@ -348,6 +362,7 @@ export default function Home() {
     setAiForm((current) => ({
       ...current,
       type: question.type,
+      examType: question.examType,
       category: question.category,
       difficulty: question.difficulty,
       baseQuestionId: question.id,
@@ -424,6 +439,26 @@ export default function Home() {
             <h1 className="m-0 text-[26px] leading-[1.23]">{navItems.find((item) => item.key === view)?.label}</h1>
           </div>
           <div className="flex items-center gap-2 max-[680px]:w-full">
+            <label className="flex min-h-10 items-center rounded-full border border-hairline bg-surface px-3 max-[680px]:flex-1">
+              <span className="sr-only">시험 종류</span>
+              <select
+                aria-label="시험 종류"
+                className="min-w-[132px] border-0 bg-transparent text-sm font-semibold text-ink outline-none max-[680px]:w-full"
+                value={examType}
+                onChange={(event) => {
+                  const nextExamType = event.target.value as ExamType;
+                  setExamType(nextExamType);
+                  setManualForm((current) => ({ ...current, examType: nextExamType }));
+                  setAiForm((current) => ({ ...current, examType: nextExamType }));
+                }}
+              >
+                {EXAM_TYPES.map((exam) => (
+                  <option key={exam.id} value={exam.id}>
+                    {exam.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="flex min-h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-3 focus-within:border-primary focus-within:shadow-[rgba(0,117,222,0.14)_0_0_0_3px] max-[680px]:flex-1">
               <Search size={16} />
               <input
@@ -784,6 +819,12 @@ function QuestionBankView({
         <PanelHeader title="문제 등록" icon={Plus} />
         <div className="mb-3 grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
           <SelectField
+            label="시험 종류"
+            value={form.examType}
+            onChange={(value) => setForm({ ...form, examType: value as ExamType })}
+            options={EXAM_TYPES.map((exam): [string, string] => [exam.id, exam.label])}
+          />
+          <SelectField
             label="유형"
             value={form.type}
             onChange={(value) => setForm({ ...form, type: value as QuestionType })}
@@ -957,6 +998,12 @@ function AiGenerateView({
       <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
         <PanelHeader title="AI 생성" icon={Brain} />
         <div className="mb-3 grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
+          <SelectField
+            label="시험 종류"
+            value={form.examType}
+            onChange={(value) => setForm({ ...form, examType: value as ExamType })}
+            options={EXAM_TYPES.map((exam): [string, string] => [exam.id, exam.label])}
+          />
           <SelectField
             label="Provider"
             value={form.provider}

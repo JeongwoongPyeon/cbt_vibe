@@ -22,5 +22,5 @@ export async function POST(request: Request) {
   const questions = validations.map((validation: DraftValidation) =>
     insertQuestion(validation.question),
   );
-  return Response.json({ questions, state: getAppState() });
+  return Response.json({ questions, state: getAppState(questions[0]?.examType || "ncs") });
 }

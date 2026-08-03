@@ -1,6 +1,6 @@
 import { generateQuestions } from "@/lib/ai";
 import { getQuestionById } from "@/lib/db";
-import { normalizeQuestionType } from "@/lib/validation";
+import { normalizeExamType, normalizeQuestionType } from "@/lib/validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +15,7 @@ export async function POST(request: Request) {
 
     const result = await generateQuestions({
       provider: body.provider === "gemini" ? "gemini" : "openai",
+      examType: normalizeExamType(body.examType),
       category: String(body.category || ""),
       difficulty: String(body.difficulty || "보통"),
       type: normalizeQuestionType(body.type),
@@ -31,4 +32,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

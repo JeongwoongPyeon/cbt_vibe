@@ -6,6 +6,22 @@ export const QUESTION_TYPES = [
 
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 
+export const EXAM_TYPES = [
+  { id: "ncs", label: "NCS" },
+  { id: "computer_general", label: "컴퓨터일반" },
+  { id: "information_security", label: "정보보호론" },
+] as const;
+
+export type ExamType = (typeof EXAM_TYPES)[number]["id"];
+
+export function isExamType(value: unknown): value is ExamType {
+  return EXAM_TYPES.some((exam) => exam.id === value);
+}
+
+export function getExamTypeLabel(examType: ExamType): string {
+  return EXAM_TYPES.find((exam) => exam.id === examType)?.label || examType;
+}
+
 export type SourceType =
   | "manual"
   | "photo_ocr"
@@ -17,6 +33,7 @@ export type AttemptMode = "practice" | "exam" | "review";
 
 export interface Question {
   id: string;
+  examType: ExamType;
   type: QuestionType;
   category: string;
   tags: string[];
@@ -33,6 +50,7 @@ export interface Question {
 }
 
 export interface QuestionDraft {
+  examType: ExamType;
   type: QuestionType;
   category: string;
   tags: string[];
@@ -49,6 +67,7 @@ export interface QuestionDraft {
 export interface Attempt {
   id: string;
   questionId: string;
+  examType: ExamType;
   selectedAnswer: string;
   isCorrect: boolean;
   elapsedSeconds: number;
@@ -58,6 +77,7 @@ export interface Attempt {
 
 export interface WrongNote {
   questionId: string;
+  examType: ExamType;
   wrongCount: number;
   lastWrongAt: string;
   resolvedAt: string | null;
@@ -96,6 +116,7 @@ export interface EnvStatus {
 }
 
 export interface AppState {
+  examType: ExamType;
   questions: Question[];
   attempts: Attempt[];
   wrongNotes: WrongNote[];
@@ -109,4 +130,3 @@ export interface DraftValidation {
   question: QuestionDraft;
   errors: string[];
 }
-

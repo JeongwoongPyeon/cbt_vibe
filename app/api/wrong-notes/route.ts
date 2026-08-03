@@ -12,6 +12,5 @@ export async function PUT(request: Request) {
     memo: String(body.memo || ""),
   });
 
-  return Response.json({ note, state: getAppState() });
+  return Response.json({ note, state: getAppState(note.examType) });
 }
-
