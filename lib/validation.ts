@@ -35,6 +35,12 @@ const rawQuestionSchema = z.object({
   explanation: z.string().optional().catch(""),
   sourceType: sourceTypeSchema.optional().catch("manual"),
   sourceNote: z.string().optional().catch(""),
+  sourceAssetId: z.string().optional().catch(undefined),
+  sourcePage: z.coerce.number().int().positive().optional().catch(undefined),
+  extractionConfidence: z.number().min(0).max(1).optional().catch(undefined),
+  answerStatus: z.enum(["confirmed", "uncertain", "missing"]).optional().catch("confirmed"),
+  reviewStatus: z.enum(["pending", "approved", "rejected"]).optional().catch("pending"),
+  validationErrors: z.array(z.string()).optional().catch([]),
 });
 
 export function getChoiceCount(type: QuestionType): number {
@@ -155,6 +161,12 @@ export function validateQuestionDraft(raw: unknown): DraftValidation {
     explanation: (data.explanation || "").trim(),
     sourceType,
     sourceNote: (data.sourceNote || "").trim(),
+    sourceAssetId: data.sourceAssetId,
+    sourcePage: data.sourcePage,
+    extractionConfidence: data.extractionConfidence,
+    answerStatus: data.answerStatus,
+    reviewStatus: data.reviewStatus,
+    validationErrors: data.validationErrors,
   };
 
   if (type === "short_answer" && question.acceptableAnswers.length === 0 && answer) {

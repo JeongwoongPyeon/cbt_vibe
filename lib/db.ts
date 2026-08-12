@@ -32,6 +32,11 @@ type QuestionRow = {
   explanation: string;
   source_type: Question["sourceType"];
   source_note: string;
+  source_asset_id?: string | null;
+  source_page?: number | null;
+  extraction_confidence?: number | null;
+  answer_status?: Question["answerStatus"];
+  review_status?: Question["reviewStatus"];
   created_at: string;
   updated_at: string;
 };
@@ -101,6 +106,11 @@ function initializeDb(db: DatabaseSync): void {
       explanation TEXT NOT NULL,
       source_type TEXT NOT NULL,
       source_note TEXT NOT NULL,
+      source_asset_id TEXT,
+      source_page INTEGER,
+      extraction_confidence REAL,
+      answer_status TEXT NOT NULL DEFAULT 'confirmed',
+      review_status TEXT NOT NULL DEFAULT 'pending',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -132,6 +142,20 @@ function initializeDb(db: DatabaseSync): void {
 
   if (!questionColumns.some((column) => column.name === "exam_type")) {
     db.exec("ALTER TABLE questions ADD COLUMN exam_type TEXT NOT NULL DEFAULT 'computer_general'");
+  }
+
+  const questionColumnMigrations: Array<[string, string]> = [
+    ["source_asset_id", "TEXT"],
+    ["source_page", "INTEGER"],
+    ["extraction_confidence", "REAL"],
+    ["answer_status", "TEXT NOT NULL DEFAULT 'confirmed'"],
+    ["review_status", "TEXT NOT NULL DEFAULT 'pending'"],
+  ];
+
+  for (const [column, definition] of questionColumnMigrations) {
+    if (!questionColumns.some((current) => current.name === column)) {
+      db.exec(`ALTER TABLE questions ADD COLUMN ${column} ${definition}`);
+    }
   }
 
   seedQuestions(db);
@@ -237,6 +261,11 @@ function questionFromRow(row: QuestionRow): Question {
     explanation: row.explanation,
     sourceType: row.source_type,
     sourceNote: row.source_note,
+    sourceAssetId: row.source_asset_id || undefined,
+    sourcePage: row.source_page || undefined,
+    extractionConfidence: row.extraction_confidence ?? undefined,
+    answerStatus: row.answer_status || "confirmed",
+    reviewStatus: row.review_status || "pending",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -283,9 +312,10 @@ export function insertQuestion(question: QuestionDraft, db = getDb()): Question 
   db.prepare(`
     INSERT INTO questions (
       id, exam_type, type, category, tags, difficulty, stem, choices, answer,
-      acceptable_answers, explanation, source_type, source_note, created_at, updated_at
+      acceptable_answers, explanation, source_type, source_note, source_asset_id,
+      source_page, extraction_confidence, answer_status, review_status, created_at, updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     question.examType,
@@ -300,6 +330,11 @@ export function insertQuestion(question: QuestionDraft, db = getDb()): Question 
     question.explanation,
     question.sourceType,
     question.sourceNote,
+    question.sourceAssetId || null,
+    question.sourcePage || null,
+    question.extractionConfidence ?? null,
+    question.answerStatus || "confirmed",
+    question.reviewStatus || "pending",
     createdAt,
     createdAt,
   );

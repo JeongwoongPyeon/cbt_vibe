@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ExamType = Literal["ncs", "computer_general", "information_security"]
 QuestionType = Literal["multiple_choice_4", "multiple_choice_5", "short_answer"]
+ImportQuestionType = Literal["auto", "multiple_choice_4", "multiple_choice_5", "short_answer"]
 Provider = Literal["openai", "gemini"]
 
 
@@ -13,16 +14,22 @@ class QuestionDraft(BaseModel):
 
     exam_type: ExamType = Field(alias="examType")
     type: QuestionType
-    category: Annotated[str, Field(min_length=1, max_length=120)]
+    category: Annotated[str, Field(max_length=120)] = "미분류"
     tags: list[str] = Field(default_factory=list, max_length=12)
     difficulty: Annotated[str, Field(min_length=1, max_length=40)] = "보통"
-    stem: Annotated[str, Field(min_length=1, max_length=4000)]
+    stem: Annotated[str, Field(max_length=4000)] = ""
     choices: list[str] = Field(default_factory=list, max_length=5)
-    answer: Annotated[str, Field(min_length=1, max_length=1000)]
+    answer: Annotated[str, Field(max_length=1000)] = ""
     acceptable_answers: list[str] = Field(default_factory=list, alias="acceptableAnswers", max_length=20)
     explanation: Annotated[str, Field(max_length=4000)] = ""
-    source_type: Literal["ai_generated", "ai_expanded"] = Field(alias="sourceType")
+    source_type: Literal["ai_generated", "ai_expanded", "photo_ocr"] = Field(default="ai_generated", alias="sourceType")
     source_note: Annotated[str, Field(max_length=500)] = Field(default="AI 생성", alias="sourceNote")
+    source_asset_id: str | None = Field(default=None, alias="sourceAssetId")
+    source_page: int | None = Field(default=None, ge=1, alias="sourcePage")
+    extraction_confidence: float | None = Field(default=None, ge=0, le=1, alias="extractionConfidence")
+    answer_status: Literal["confirmed", "uncertain", "missing"] = Field(default="confirmed", alias="answerStatus")
+    review_status: Literal["pending", "approved", "rejected"] = Field(default="pending", alias="reviewStatus")
+    validation_errors: list[str] = Field(default_factory=list, alias="validationErrors")
 
     @field_validator("tags", "choices", "acceptable_answers", mode="before")
     @classmethod
@@ -55,6 +62,18 @@ class GenerateQuestionsRequest(BaseModel):
     base_question: dict[str, object] | None = Field(default=None, alias="baseQuestion")
 
 
+class ImportImagesRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    provider: Provider | None = None
+    exam_type: ExamType = Field(alias="examType")
+    category: Annotated[str, Field(max_length=120)] = ""
+    difficulty: Annotated[str, Field(max_length=40)] = "보통"
+    type: ImportQuestionType = "auto"
+    max_questions: Annotated[int, Field(ge=1, le=10)] = Field(default=10, alias="maxQuestions")
+    instruction: Annotated[str, Field(max_length=2000)] = ""
+
+
 class RunMeta(BaseModel):
     provider: Provider
     model: str
@@ -66,7 +85,7 @@ class GenerateQuestionsResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     run_id: str = Field(alias="runId")
-    status: Literal["preview_ready", "failed"]
+    status: Literal["preview_ready", "review_required", "failed"]
     questions: list[QuestionDraft] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
     meta: RunMeta

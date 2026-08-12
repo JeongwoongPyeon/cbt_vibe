@@ -26,6 +26,7 @@ AI 기반 CBT(Computer Based Test) 풀이 사이트입니다.
 - 엑셀 파일 문제 가져오기
 - GPT/Gemini 기반 문제 생성 API 연결
 - Python FastAPI AI Worker 기반 일반 문제 생성 워크플로우
+- 문제집 사진 인식 및 CBT 문제 미리보기 워크플로우
 - NCS, 컴퓨터일반, 정보보호론별 문제/풀이/오답노트 분리
 - Noto Sans KR 로컬 폰트와 TailwindCSS 기반 UI
 
@@ -40,8 +41,10 @@ AI 기반 CBT(Computer Based Test) 풀이 사이트입니다.
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-4.1-mini
+OPENAI_VISION_MODEL=gpt-4.1-mini
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-2.0-flash
+GEMINI_VISION_MODEL=gemini-2.0-flash
 AI_DEFAULT_PROVIDER=openai
 AI_WORKER_URL=http://127.0.0.1:8001
 AI_WORKER_TIMEOUT_MS=90000
@@ -68,8 +71,8 @@ python -m uvicorn app.main:app --app-dir ai-worker --host 127.0.0.1 --port 8001
 ```
 
 Worker의 `GET /health`가 `status: ok`를 반환하면 Next.js의 AI 생성 화면에서
-일반 문제 생성이 동작합니다. 문제집 사진 인식은 다음 단계에서 별도 워크플로우로
-추가합니다.
+일반 문제 생성과 AI 화면의 `사진 인식` 모드가 동작합니다. 사진 결과는 정답과
+형식 검토 후 저장하며, 정답이 누락된 항목은 직접 수정할 수 있습니다.
 
 두 서버를 한 번에 실행하려면 PowerShell에서 다음 명령을 사용합니다.
 

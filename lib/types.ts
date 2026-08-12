@@ -45,6 +45,11 @@ export interface Question {
   explanation: string;
   sourceType: SourceType;
   sourceNote: string;
+  sourceAssetId?: string;
+  sourcePage?: number;
+  extractionConfidence?: number;
+  answerStatus?: "confirmed" | "uncertain" | "missing";
+  reviewStatus?: "pending" | "approved" | "rejected";
   createdAt: string;
   updatedAt: string;
 }
@@ -62,6 +67,12 @@ export interface QuestionDraft {
   explanation: string;
   sourceType: SourceType;
   sourceNote: string;
+  sourceAssetId?: string;
+  sourcePage?: number;
+  extractionConfidence?: number;
+  answerStatus?: "confirmed" | "uncertain" | "missing";
+  reviewStatus?: "pending" | "approved" | "rejected";
+  validationErrors?: string[];
 }
 
 export interface Attempt {

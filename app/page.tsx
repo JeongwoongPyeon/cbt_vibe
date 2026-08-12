@@ -9,6 +9,7 @@ import {
   ClipboardList,
   FileSpreadsheet,
   History,
+  ImagePlus,
   LibraryBig,
   Loader2,
   NotebookTabs,
@@ -63,6 +64,8 @@ type AiForm = {
   baseQuestionId: string;
 };
 
+type AiMode = "generate" | "photo";
+
 const emptyManualForm: ManualForm = {
   examType: "ncs",
   type: "multiple_choice_4",
@@ -100,6 +103,8 @@ export default function Home() {
   const [manualForm, setManualForm] = useState<ManualForm>(emptyManualForm);
   const [importPreview, setImportPreview] = useState<ImportPreview[]>([]);
   const [generatedQuestions, setGeneratedQuestions] = useState<QuestionDraft[]>([]);
+  const [aiMode, setAiMode] = useState<AiMode>("generate");
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -342,6 +347,72 @@ export default function Home() {
     }
   }
 
+  async function importPhotoQuestions() {
+    if (photoFiles.length === 0) {
+      setStatusMessage("문제집 사진을 한 장 이상 선택해 주세요.");
+      return;
+    }
+
+    setBusy(true);
+    setGeneratedQuestions([]);
+    setStatusMessage("");
+
+    try {
+      const formData = new FormData();
+      photoFiles.forEach((file) => formData.append("images", file, file.name));
+      formData.set("provider", aiForm.provider);
+      formData.set("examType", aiForm.examType);
+      formData.set("category", aiForm.category);
+      formData.set("difficulty", aiForm.difficulty);
+      formData.set("maxQuestions", String(Math.min(10, Math.max(1, aiForm.count))));
+      formData.set("instruction", aiForm.instruction);
+
+      const response = await fetch("/api/ai/import-images", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "사진 문제 변환에 실패했습니다.");
+      }
+
+      setGeneratedQuestions(payload.questions || []);
+      setStatusMessage(
+        payload.errors?.length
+          ? `검토가 필요한 항목이 있습니다: ${payload.errors.join(" ")}`
+          : `${payload.questions?.length || 0}개 문제를 추출했습니다.`,
+      );
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "사진 문제 변환에 실패했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveGeneratedQuestions() {
+    const validations = generatedQuestions.map((question) => validateQuestionDraft(question));
+    const errors = validations.flatMap((validation) => validation.errors);
+
+    if (errors.length > 0) {
+      setStatusMessage(`저장 전 확인이 필요합니다: ${errors.join(" ")}`);
+      return;
+    }
+
+    await saveQuestions(
+      validations.map((validation) => validation.question),
+      `${validations.length}개 문제를 저장했습니다.`,
+    );
+  }
+
+  function updateGeneratedQuestion(index: number, updates: Partial<QuestionDraft>) {
+    setGeneratedQuestions((current) =>
+      current.map((question, questionIndex) =>
+        questionIndex === index ? { ...question, ...updates } : question,
+      ),
+    );
+  }
+
   async function updateWrongNote(questionId: string, updates: Partial<WrongNote>) {
     const current = state?.wrongNotes.find((note) => note.questionId === questionId);
 
@@ -542,13 +613,23 @@ export default function Home() {
 
         {view === "ai" ? (
           <AiGenerateView
+            aiMode={aiMode}
             busy={busy}
             env={state.env}
             form={aiForm}
             generatedQuestions={generatedQuestions}
+            photoFiles={photoFiles}
             questions={state.questions}
+            onImportPhotos={() => void importPhotoQuestions()}
             onGenerate={() => void generateAiQuestions()}
-            onSave={() => void saveQuestions(generatedQuestions, `${generatedQuestions.length}개 문제를 저장했습니다.`)}
+            onModeChange={(mode) => {
+              setAiMode(mode);
+              setGeneratedQuestions([]);
+              setStatusMessage("");
+            }}
+            onPhotoFilesChange={setPhotoFiles}
+            onSave={() => void saveGeneratedQuestions()}
+            onUpdateQuestion={updateGeneratedQuestion}
             setForm={setAiForm}
           />
         ) : null}
@@ -974,7 +1055,225 @@ function ImportView({
   );
 }
 
-function AiGenerateView({
+type AiGenerateViewProps = {
+  aiMode: AiMode;
+  busy: boolean;
+  env: AppState["env"];
+  form: AiForm;
+  generatedQuestions: QuestionDraft[];
+  photoFiles: File[];
+  questions: Question[];
+  onImportPhotos: () => void;
+  onGenerate: () => void;
+  onModeChange: (mode: AiMode) => void;
+  onPhotoFilesChange: (files: File[]) => void;
+  onSave: () => void;
+  onUpdateQuestion: (index: number, updates: Partial<QuestionDraft>) => void;
+  setForm: (form: AiForm) => void;
+};
+
+function AiGenerateView(props: AiGenerateViewProps) {
+  const isPhotoMode = props.aiMode === "photo";
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="inline-flex self-start rounded-lg border border-hairline bg-canvas-soft p-1" role="tablist">
+        <button
+          aria-selected={!isPhotoMode}
+          className={!isPhotoMode ? "inline-flex min-h-9 items-center gap-1.5 rounded-md bg-surface px-3 text-sm font-semibold text-ink shadow-sm" : "inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-sm text-ink-muted"}
+          onClick={() => props.onModeChange("generate")}
+          role="tab"
+          type="button"
+        >
+          <Brain size={16} />
+          일반 생성
+        </button>
+        <button
+          aria-selected={isPhotoMode}
+          className={isPhotoMode ? "inline-flex min-h-9 items-center gap-1.5 rounded-md bg-surface px-3 text-sm font-semibold text-ink shadow-sm" : "inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-sm text-ink-muted"}
+          onClick={() => props.onModeChange("photo")}
+          role="tab"
+          type="button"
+        >
+          <ImagePlus size={16} />
+          사진 인식
+        </button>
+      </div>
+
+      {isPhotoMode ? (
+        <PhotoImportView {...props} />
+      ) : (
+        <LegacyAiGenerateView
+          busy={props.busy}
+          env={props.env}
+          form={props.form}
+          generatedQuestions={props.generatedQuestions}
+          questions={props.questions}
+          onGenerate={props.onGenerate}
+          onSave={props.onSave}
+          setForm={props.setForm}
+        />
+      )}
+    </div>
+  );
+}
+
+function PhotoImportView({
+  busy,
+  env,
+  form,
+  generatedQuestions,
+  photoFiles,
+  onImportPhotos,
+  onPhotoFilesChange,
+  onSave,
+  onUpdateQuestion,
+  setForm,
+}: AiGenerateViewProps) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_340px] gap-4 max-[1100px]:grid-cols-1">
+      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
+        <PanelHeader title="문제집 사진 인식" icon={ImagePlus} />
+        <div className="mb-3 grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
+          <SelectField
+            label="시험 종류"
+            value={form.examType}
+            onChange={(value) => setForm({ ...form, examType: value as ExamType })}
+            options={EXAM_TYPES.map((exam): [string, string] => [exam.id, exam.label])}
+          />
+          <SelectField
+            label="Provider"
+            value={form.provider}
+            onChange={(value) => setForm({ ...form, provider: value as "openai" | "gemini" })}
+            options={[
+              ["openai", `OpenAI · ${env.openaiModel}`],
+              ["gemini", `Gemini · ${env.geminiModel}`],
+            ]}
+          />
+          <TextField label="카테고리" value={form.category} onChange={(value) => setForm({ ...form, category: value })} />
+          <TextField label="난이도" value={form.difficulty} onChange={(value) => setForm({ ...form, difficulty: value })} />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[13px] text-ink-muted">최대 추출 개수</span>
+            <input
+              className="min-h-[38px] w-full rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
+              max={10}
+              min={1}
+              type="number"
+              value={form.count}
+              onChange={(event) => setForm({ ...form, count: Number(event.target.value) })}
+            />
+          </label>
+        </div>
+
+        <label className="relative mb-3 flex min-h-[118px] cursor-pointer items-center justify-center gap-2.5 rounded-xl border border-dashed border-ink-faint bg-canvas-soft text-ink-secondary">
+          <ImagePlus size={22} />
+          <span>JPG, PNG, WEBP 사진 선택</span>
+          <input
+            accept="image/jpeg,image/png,image/webp"
+            className="absolute inset-0 cursor-pointer opacity-0"
+            multiple
+            onChange={(event) => onPhotoFilesChange(Array.from(event.target.files || []))}
+            type="file"
+          />
+        </label>
+
+        {photoFiles.length > 0 ? (
+          <div className="mb-3 flex flex-col gap-1.5 rounded-lg border border-hairline bg-canvas-soft p-3 text-sm">
+            {photoFiles.map((file, index) => (
+              <div className="flex items-center justify-between gap-2" key={`${file.name}-${file.lastModified}`}>
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap">{file.name}</span>
+                <button
+                  aria-label={`${file.name} 제거`}
+                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-surface hover:text-ink"
+                  onClick={() => onPhotoFilesChange(photoFiles.filter((_, fileIndex) => fileIndex !== index))}
+                  title="사진 제거"
+                  type="button"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <label className="mb-3 flex flex-col gap-1.5">
+          <span className="text-[13px] text-ink-muted">추출 요청</span>
+          <textarea
+            className="min-h-[104px] w-full resize-y rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
+            value={form.instruction}
+            onChange={(event) => setForm({ ...form, instruction: event.target.value })}
+          />
+        </label>
+
+        <div className="mt-4 flex items-center gap-2">
+          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-primary px-4 font-medium text-on-primary active:bg-primary-active" disabled={busy || photoFiles.length === 0} onClick={onImportPhotos} type="button">
+            {busy ? <Loader2 className="animate-spin" size={18} /> : <ImagePlus size={18} />}
+            사진에서 추출
+          </button>
+          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-hairline bg-surface px-3.5 text-ink" disabled={generatedQuestions.length === 0 || busy} onClick={onSave} type="button">
+            <Save size={17} />
+            검수 완료 저장
+          </button>
+        </div>
+      </section>
+
+      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
+        <PanelHeader title="사진 변환 검수" icon={ClipboardList} />
+        <div className="flex max-h-[calc(100vh-180px)] flex-col gap-0 overflow-auto">
+          {generatedQuestions.length === 0 ? (
+            <EmptyLine label="사진 변환 결과 없음" />
+          ) : (
+            generatedQuestions.map((question, index) => (
+              <article className="block border-t border-hairline py-4" key={`${question.stem}-${index}`}>
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge>{getQuestionTypeLabel(question.type)}</Badge>
+                  <Badge>{question.category}</Badge>
+                  {question.sourcePage ? <Badge>페이지 {question.sourcePage}</Badge> : null}
+                  {question.answerStatus === "missing" ? <Badge>정답 확인 필요</Badge> : null}
+                </div>
+                <textarea
+                  className="my-2.5 min-h-[82px] w-full resize-y rounded border border-hairline bg-surface px-2 py-1.5 text-[17px] leading-[1.45] text-ink outline-none focus:border-primary"
+                  value={question.stem}
+                  onChange={(event) => onUpdateQuestion(index, { stem: event.target.value, validationErrors: [] })}
+                />
+                {question.choices.length ? (
+                  <ol className="my-2.5 flex flex-col gap-1.5 pl-[22px]">
+                    {question.choices.map((choice, choiceIndex) => (
+                      <li key={`${index}-${choiceIndex}`}>
+                        <input
+                          className="min-h-[34px] w-full rounded border border-hairline bg-surface px-2 py-1 text-sm text-ink outline-none focus:border-primary"
+                          value={choice}
+                          onChange={(event) =>
+                            onUpdateQuestion(index, {
+                              choices: question.choices.map((item, itemIndex) => itemIndex === choiceIndex ? event.target.value : item),
+                              validationErrors: [],
+                            })
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ol>
+                ) : null}
+                <label className="mt-2.5 flex flex-col gap-1.5">
+                  <span className="text-[13px] text-ink-muted">정답</span>
+                  <input
+                    className="min-h-[36px] w-full rounded border border-hairline bg-surface px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
+                    value={question.answer}
+                    onChange={(event) => onUpdateQuestion(index, { answer: event.target.value, answerStatus: event.target.value.trim() ? "confirmed" : "missing", validationErrors: [] })}
+                  />
+                </label>
+                {question.validationErrors?.length ? <p className="mt-2 text-[13px] text-danger">{question.validationErrors.join(" ")}</p> : null}
+                {question.extractionConfidence !== undefined ? <p className="mt-2 text-[12px] text-ink-muted">추출 신뢰도 {Math.round(question.extractionConfidence * 100)}%</p> : null}
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function LegacyAiGenerateView({
   busy,
   env,
   form,

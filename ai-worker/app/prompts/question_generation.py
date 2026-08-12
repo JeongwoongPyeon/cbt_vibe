@@ -42,3 +42,35 @@ def build_generation_messages(request: GenerateQuestionsRequest) -> list[tuple[s
 - sourceType은 기준 문제가 있으면 ai_expanded, 없으면 ai_generated로 작성한다.
 """
     return [("system", system), ("human", human)]
+
+
+def build_image_extraction_prompt(
+    exam_type: str,
+    category: str,
+    difficulty: str,
+    question_type: str,
+    max_questions: int,
+    instruction: str,
+) -> tuple[str, str]:
+    requested_type = question_type if question_type != "auto" else "사진에 보이는 형식에 따라 자동 판별"
+    system = """너는 문제집 사진을 CBT 문제 데이터로 옮기는 추출 도우미다.
+사진에 실제로 보이는 텍스트만 옮기고, 잘 보이지 않거나 사진에 없는 내용은 추측하지 않는다.
+응답은 QuestionBatch JSON 스키마에 맞춘다. 문제마다 sourceType은 photo_ocr로 설정한다.
+정답이 사진에 없거나 확실하지 않으면 answer를 빈 문자열 또는 추출값으로 두고 answerStatus를 missing 또는 uncertain으로 설정한다.
+extractionConfidence는 0부터 1 사이의 보수적인 값으로 작성한다."""
+    human = f"""업로드된 이미지에서 CBT 문제를 최대 {max_questions}개 추출한다.
+
+- 시험 종류: {exam_type}
+- 카테고리: {category or '사진 내용을 바탕으로 분류'}
+- 난이도: {difficulty or '보통'}
+- 문제 유형: {requested_type}
+- 추가 요청: {instruction or '없음'}
+
+규칙:
+- 4지선다형은 보기 4개, 5지선다형은 보기 5개를 유지한다.
+- 단답형은 choices를 빈 배열로 둔다.
+- 사진 순서에 맞춰 sourcePage를 1부터 기록한다.
+- 원본에 없는 해설이나 정답을 새로 만들지 않는다.
+- 문제 경계가 불명확하면 validationErrors에 확인 내용을 기록한다.
+"""
+    return system, human
