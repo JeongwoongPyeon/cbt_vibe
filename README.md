@@ -71,4 +71,13 @@ Worker의 `GET /health`가 `status: ok`를 반환하면 Next.js의 AI 생성 화
 일반 문제 생성이 동작합니다. 문제집 사진 인식은 다음 단계에서 별도 워크플로우로
 추가합니다.
 
+두 서버를 한 번에 실행하려면 PowerShell에서 다음 명령을 사용합니다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1
+```
+
+스크립트는 Python Worker와 Next.js를 별도 PowerShell 창에서 실행합니다. Next.js의
+기본 포트가 사용 중이면 비어 있는 다음 포트를 자동으로 선택합니다.
+
 앱 데이터는 `local-data/cbt.sqlite`에 저장되며 Git에는 커밋되지 않습니다.
