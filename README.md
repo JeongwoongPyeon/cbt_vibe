@@ -25,6 +25,7 @@ AI 기반 CBT(Computer Based Test) 풀이 사이트입니다.
 - 수동 문제 등록
 - 엑셀 파일 문제 가져오기
 - GPT/Gemini 기반 문제 생성 API 연결
+- Python FastAPI AI Worker 기반 일반 문제 생성 워크플로우
 - NCS, 컴퓨터일반, 정보보호론별 문제/풀이/오답노트 분리
 - Noto Sans KR 로컬 폰트와 TailwindCSS 기반 UI
 
@@ -42,6 +43,10 @@ OPENAI_MODEL=gpt-4.1-mini
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-2.0-flash
 AI_DEFAULT_PROVIDER=openai
+AI_WORKER_URL=http://127.0.0.1:8001
+AI_WORKER_TIMEOUT_MS=90000
+AI_WORKER_REQUEST_TIMEOUT=90
+AI_PROMPT_VERSION=question-v1
 ```
 
 실제 API 키가 들어간 `.env` 파일은 Git에 커밋하지 않습니다.
@@ -52,5 +57,18 @@ AI_DEFAULT_PROVIDER=openai
 npm install
 npm run dev
 ```
+
+AI 문제 생성을 사용하려면 별도 터미널에서 Worker도 실행합니다.
+
+```bash
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r ai-worker/requirements.txt
+python -m uvicorn app.main:app --app-dir ai-worker --host 127.0.0.1 --port 8001
+```
+
+Worker의 `GET /health`가 `status: ok`를 반환하면 Next.js의 AI 생성 화면에서
+일반 문제 생성이 동작합니다. 문제집 사진 인식은 다음 단계에서 별도 워크플로우로
+추가합니다.
 
 앱 데이터는 `local-data/cbt.sqlite`에 저장되며 Git에는 커밋되지 않습니다.
