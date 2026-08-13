@@ -308,13 +308,17 @@ export default function Home() {
     const preview = rows.map((row, index) => {
       const validation = validateQuestionDraft({
         type: normalizeQuestionType(row.type),
-        examType,
+        examType: row.exam_type || row.examType || examType,
         category: row.category,
+        part: row.part,
+        unit: row.unit,
+        topic: row.topic,
         stem: row.question || row.stem,
         choices: [row.choice_1, row.choice_2, row.choice_3, row.choice_4, row.choice_5]
           .map((value) => String(value || "").trim())
           .filter(Boolean),
         answer: row.answer,
+        acceptableAnswers: row.acceptable_answers || row.acceptableAnswers,
         explanation: row.explanation,
         tags: row.tags,
         difficulty: row.difficulty,
