@@ -28,6 +28,9 @@ def build_generation_messages(request: GenerateQuestionsRequest) -> list[tuple[s
 
 - 시험 종류: {request.exam_type}
 - 시험 범위: {profile}
+- 대단원: {request.part or '지정되지 않음'}
+- 단원: {request.unit or '사용자 지정 없음'}
+- 세부 기준: {request.topic or '사용자 지정 없음'}
 - 문제 유형: {request.type}
 - 카테고리: {request.category or '적절한 세부 카테고리'}
 - 난이도: {request.difficulty or '보통'}
@@ -39,6 +42,7 @@ def build_generation_messages(request: GenerateQuestionsRequest) -> list[tuple[s
 - short_answer는 choices를 빈 배열로 만든다.
 - 객관식 answer는 보기 문장 또는 1부터 시작하는 보기 번호로 작성한다.
 - 모든 문제에 간결한 해설을 포함한다.
+- part, unit, topic에는 요청된 기준값을 그대로 기록한다.
 - sourceType은 기준 문제가 있으면 ai_expanded, 없으면 ai_generated로 작성한다.
 """
     return [("system", system), ("human", human)]
@@ -47,6 +51,9 @@ def build_generation_messages(request: GenerateQuestionsRequest) -> list[tuple[s
 def build_image_extraction_prompt(
     exam_type: str,
     category: str,
+    part: str,
+    unit: str,
+    topic: str,
     difficulty: str,
     question_type: str,
     max_questions: int,
@@ -61,6 +68,9 @@ extractionConfidence는 0부터 1 사이의 보수적인 값으로 작성한다.
     human = f"""업로드된 이미지에서 CBT 문제를 최대 {max_questions}개 추출한다.
 
 - 시험 종류: {exam_type}
+- 대단원: {part or '지정되지 않음'}
+- 단원: {unit or '사용자 지정 없음'}
+- 세부 기준: {topic or '사용자 지정 없음'}
 - 카테고리: {category or '사진 내용을 바탕으로 분류'}
 - 난이도: {difficulty or '보통'}
 - 문제 유형: {requested_type}

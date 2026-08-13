@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
+import { getDefaultCriteria, getCurriculum } from "@/lib/curriculum";
 import { EXAM_TYPES } from "@/lib/types";
 import type { AppState, ExamType, Question, QuestionDraft, QuestionType, WrongNote } from "@/lib/types";
 import {
@@ -38,6 +39,9 @@ type ManualForm = {
   examType: ExamType;
   type: QuestionType;
   category: string;
+  part: string;
+  unit: string;
+  topic: string;
   difficulty: string;
   stem: string;
   choices: string[];
@@ -58,6 +62,9 @@ type AiForm = {
   examType: ExamType;
   type: QuestionType;
   category: string;
+  part: string;
+  unit: string;
+  topic: string;
   difficulty: string;
   count: number;
   instruction: string;
@@ -66,10 +73,18 @@ type AiForm = {
 
 type AiMode = "generate" | "photo";
 
+type CriteriaForm = {
+  examType: ExamType;
+  part: string;
+  unit: string;
+  topic: string;
+};
+
 const emptyManualForm: ManualForm = {
   examType: "ncs",
   type: "multiple_choice_4",
   category: "정보처리 기초",
+  ...getDefaultCriteria("ncs"),
   difficulty: "보통",
   stem: "",
   choices: ["", "", "", "", ""],
@@ -112,7 +127,8 @@ export default function Home() {
     provider: "openai",
     examType: "ncs",
     type: "multiple_choice_4",
-    category: "정보처리 기초",
+    category: "",
+    ...getDefaultCriteria("ncs"),
     difficulty: "보통",
     count: 3,
     instruction: "",
@@ -151,6 +167,9 @@ export default function Home() {
       [
         question.stem,
         question.category,
+        question.part || "",
+        question.unit || "",
+        question.topic || "",
         question.difficulty,
         question.sourceType,
         ...question.tags,
@@ -174,6 +193,7 @@ export default function Home() {
       ...current,
       examType: nextState.examType,
       provider: nextState.env.defaultProvider,
+      ...getDefaultCriteria(nextState.examType),
     }));
   }
 
@@ -363,6 +383,9 @@ export default function Home() {
       formData.set("provider", aiForm.provider);
       formData.set("examType", aiForm.examType);
       formData.set("category", aiForm.category);
+      formData.set("part", aiForm.part);
+      formData.set("unit", aiForm.unit);
+      formData.set("topic", aiForm.topic);
       formData.set("difficulty", aiForm.difficulty);
       formData.set("maxQuestions", String(Math.min(10, Math.max(1, aiForm.count))));
       formData.set("instruction", aiForm.instruction);
@@ -430,17 +453,30 @@ export default function Home() {
   }
 
   function setSimilarGeneration(question: Question) {
+    const defaults = getDefaultCriteria(question.examType);
     setAiForm((current) => ({
       ...current,
       type: question.type,
       examType: question.examType,
       category: question.category,
+      part: question.part || defaults.part,
+      unit: question.unit || defaults.unit,
+      topic: question.topic || defaults.topic,
       difficulty: question.difficulty,
       baseQuestionId: question.id,
       instruction: "기준 문제와 같은 개념을 다루되 지문과 보기를 새롭게 구성",
     }));
     setGeneratedQuestions([]);
     setView("ai");
+  }
+
+  function updateAiForm(nextForm: AiForm) {
+    if (nextForm.examType !== aiForm.examType) {
+      setAiForm({ ...nextForm, ...getDefaultCriteria(nextForm.examType) });
+      return;
+    }
+
+    setAiForm(nextForm);
   }
 
   if (!state) {
@@ -519,8 +555,16 @@ export default function Home() {
                 onChange={(event) => {
                   const nextExamType = event.target.value as ExamType;
                   setExamType(nextExamType);
-                  setManualForm((current) => ({ ...current, examType: nextExamType }));
-                  setAiForm((current) => ({ ...current, examType: nextExamType }));
+                  setManualForm((current) => ({
+                    ...current,
+                    examType: nextExamType,
+                    ...getDefaultCriteria(nextExamType),
+                  }));
+                  setAiForm((current) => ({
+                    ...current,
+                    examType: nextExamType,
+                    ...getDefaultCriteria(nextExamType),
+                  }));
                 }}
               >
                 {EXAM_TYPES.map((exam) => (
@@ -902,7 +946,10 @@ function QuestionBankView({
           <SelectField
             label="시험 종류"
             value={form.examType}
-            onChange={(value) => setForm({ ...form, examType: value as ExamType })}
+            onChange={(value) => {
+              const nextExamType = value as ExamType;
+              setForm({ ...form, examType: nextExamType, ...getDefaultCriteria(nextExamType) });
+            }}
             options={EXAM_TYPES.map((exam): [string, string] => [exam.id, exam.label])}
           />
           <SelectField
@@ -915,6 +962,7 @@ function QuestionBankView({
               ["short_answer", "단답형"],
             ]}
           />
+          <CriteriaFields form={form} setForm={setForm} />
           <TextField
             label="카테고리"
             value={form.category}
@@ -1118,6 +1166,37 @@ function AiGenerateView(props: AiGenerateViewProps) {
   );
 }
 
+function CriteriaFields<T extends CriteriaForm>({
+  form,
+  setForm,
+}: {
+  form: T;
+  setForm: (form: T) => void;
+}) {
+  const parts = getCurriculum(form.examType);
+
+  return (
+    <div className="col-span-2 grid grid-cols-3 gap-3 rounded-lg border border-hairline bg-canvas-soft p-3 max-[680px]:col-span-1 max-[680px]:grid-cols-1">
+      <SelectField
+        label="대단원 · 기본 목차"
+        value={form.part}
+        onChange={(value) => setForm({ ...form, part: value, unit: "", topic: "" })}
+        options={parts.map((item): [string, string] => [item.label, item.label])}
+      />
+      <TextField
+        label="단원 · 직접 입력"
+        value={form.unit}
+        onChange={(value) => setForm({ ...form, unit: value })}
+      />
+      <TextField
+        label="세부 기준 · 직접 입력"
+        value={form.topic}
+        onChange={(value) => setForm({ ...form, topic: value })}
+      />
+    </div>
+  );
+}
+
 function PhotoImportView({
   busy,
   env,
@@ -1138,7 +1217,10 @@ function PhotoImportView({
           <SelectField
             label="시험 종류"
             value={form.examType}
-            onChange={(value) => setForm({ ...form, examType: value as ExamType })}
+            onChange={(value) => {
+              const nextExamType = value as ExamType;
+              setForm({ ...form, examType: nextExamType, ...getDefaultCriteria(nextExamType) });
+            }}
             options={EXAM_TYPES.map((exam): [string, string] => [exam.id, exam.label])}
           />
           <SelectField
@@ -1150,6 +1232,7 @@ function PhotoImportView({
               ["gemini", `Gemini · ${env.geminiModel}`],
             ]}
           />
+          <CriteriaFields form={form} setForm={setForm} />
           <TextField label="카테고리" value={form.category} onChange={(value) => setForm({ ...form, category: value })} />
           <TextField label="난이도" value={form.difficulty} onChange={(value) => setForm({ ...form, difficulty: value })} />
           <label className="flex flex-col gap-1.5">
@@ -1228,6 +1311,8 @@ function PhotoImportView({
                 <div className="flex flex-wrap gap-1.5">
                   <Badge>{getQuestionTypeLabel(question.type)}</Badge>
                   <Badge>{question.category}</Badge>
+                  {question.part ? <Badge>{question.part}</Badge> : null}
+                  {question.topic ? <Badge>{question.topic}</Badge> : null}
                   {question.sourcePage ? <Badge>페이지 {question.sourcePage}</Badge> : null}
                   {question.answerStatus === "missing" ? <Badge>정답 확인 필요</Badge> : null}
                 </div>
@@ -1312,6 +1397,7 @@ function LegacyAiGenerateView({
               ["gemini", `Gemini · ${env.geminiModel}`],
             ]}
           />
+          <CriteriaFields form={form} setForm={setForm} />
           <SelectField
             label="유형"
             value={form.type}
@@ -1394,6 +1480,8 @@ function LegacyAiGenerateView({
                   <Badge>{getQuestionTypeLabel(question.type)}</Badge>
                   <Badge>{question.category}</Badge>
                   <Badge>{question.difficulty}</Badge>
+                  {question.part ? <Badge>{question.part}</Badge> : null}
+                  {question.topic ? <Badge>{question.topic}</Badge> : null}
                 </div>
                 <h3 className="my-2.5 text-[17px] leading-[1.45]">{question.stem}</h3>
                 {question.choices.length ? (

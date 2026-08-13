@@ -36,6 +36,9 @@ export interface Question {
   examType: ExamType;
   type: QuestionType;
   category: string;
+  part?: string;
+  unit?: string;
+  topic?: string;
   tags: string[];
   difficulty: string;
   stem: string;
@@ -58,6 +61,9 @@ export interface QuestionDraft {
   examType: ExamType;
   type: QuestionType;
   category: string;
+  part?: string;
+  unit?: string;
+  topic?: string;
   tags: string[];
   difficulty: string;
   stem: string;

@@ -73,7 +73,16 @@ async def generate_questions(
         if question_errors:
             errors.extend([f"{index}번 문제: {error}" for error in question_errors])
         else:
-            valid_questions.append(question.model_copy(update={"source_type": expected_source}))
+            valid_questions.append(
+                question.model_copy(
+                    update={
+                        "source_type": expected_source,
+                        "part": request.part,
+                        "unit": request.unit,
+                        "topic": request.topic,
+                    }
+                )
+            )
 
     if len(valid_questions) == 0:
         status = "failed"

@@ -15,6 +15,9 @@ class QuestionDraft(BaseModel):
     exam_type: ExamType = Field(alias="examType")
     type: QuestionType
     category: Annotated[str, Field(max_length=120)] = "미분류"
+    part: Annotated[str, Field(max_length=160)] = ""
+    unit: Annotated[str, Field(max_length=160)] = ""
+    topic: Annotated[str, Field(max_length=160)] = ""
     tags: list[str] = Field(default_factory=list, max_length=12)
     difficulty: Annotated[str, Field(min_length=1, max_length=40)] = "보통"
     stem: Annotated[str, Field(max_length=4000)] = ""
@@ -55,6 +58,9 @@ class GenerateQuestionsRequest(BaseModel):
     provider: Provider | None = None
     exam_type: ExamType = Field(alias="examType")
     category: Annotated[str, Field(max_length=120)] = ""
+    part: Annotated[str, Field(max_length=160)] = ""
+    unit: Annotated[str, Field(max_length=160)] = ""
+    topic: Annotated[str, Field(max_length=160)] = ""
     difficulty: Annotated[str, Field(max_length=40)] = "보통"
     type: QuestionType = "multiple_choice_4"
     count: Annotated[int, Field(ge=1, le=10)] = 3
@@ -68,6 +74,9 @@ class ImportImagesRequest(BaseModel):
     provider: Provider | None = None
     exam_type: ExamType = Field(alias="examType")
     category: Annotated[str, Field(max_length=120)] = ""
+    part: Annotated[str, Field(max_length=160)] = ""
+    unit: Annotated[str, Field(max_length=160)] = ""
+    topic: Annotated[str, Field(max_length=160)] = ""
     difficulty: Annotated[str, Field(max_length=40)] = "보통"
     type: ImportQuestionType = "auto"
     max_questions: Annotated[int, Field(ge=1, le=10)] = Field(default=10, alias="maxQuestions")

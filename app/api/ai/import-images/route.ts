@@ -20,6 +20,9 @@ export async function POST(request: Request) {
     form.set("provider", incoming.get("provider") === "gemini" ? "gemini" : "openai");
     form.set("examType", normalizeExamType(incoming.get("examType")));
     form.set("category", String(incoming.get("category") || ""));
+    form.set("part", String(incoming.get("part") || ""));
+    form.set("unit", String(incoming.get("unit") || ""));
+    form.set("topic", String(incoming.get("topic") || ""));
     form.set("difficulty", String(incoming.get("difficulty") || "보통"));
     form.set("type", "auto");
     form.set("maxQuestions", String(Math.min(10, Math.max(1, Number(incoming.get("maxQuestions") || 10)))));

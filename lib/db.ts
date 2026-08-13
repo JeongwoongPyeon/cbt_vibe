@@ -23,6 +23,9 @@ type QuestionRow = {
   exam_type: ExamType;
   type: Question["type"];
   category: string;
+  part?: string | null;
+  unit?: string | null;
+  topic?: string | null;
   tags: string;
   difficulty: string;
   stem: string;
@@ -97,6 +100,9 @@ function initializeDb(db: DatabaseSync): void {
       exam_type TEXT NOT NULL DEFAULT 'computer_general',
       type TEXT NOT NULL,
       category TEXT NOT NULL,
+      part TEXT NOT NULL DEFAULT '',
+      unit TEXT NOT NULL DEFAULT '',
+      topic TEXT NOT NULL DEFAULT '',
       tags TEXT NOT NULL,
       difficulty TEXT NOT NULL,
       stem TEXT NOT NULL,
@@ -145,6 +151,9 @@ function initializeDb(db: DatabaseSync): void {
   }
 
   const questionColumnMigrations: Array<[string, string]> = [
+    ["part", "TEXT NOT NULL DEFAULT ''"],
+    ["unit", "TEXT NOT NULL DEFAULT ''"],
+    ["topic", "TEXT NOT NULL DEFAULT ''"],
     ["source_asset_id", "TEXT"],
     ["source_page", "INTEGER"],
     ["extraction_confidence", "REAL"],
@@ -252,6 +261,9 @@ function questionFromRow(row: QuestionRow): Question {
     examType: normalizeExamType(row.exam_type),
     type: row.type,
     category: row.category,
+    part: row.part || undefined,
+    unit: row.unit || undefined,
+    topic: row.topic || undefined,
     tags: parseJsonList(row.tags),
     difficulty: row.difficulty,
     stem: row.stem,
@@ -311,16 +323,19 @@ export function insertQuestion(question: QuestionDraft, db = getDb()): Question 
 
   db.prepare(`
     INSERT INTO questions (
-      id, exam_type, type, category, tags, difficulty, stem, choices, answer,
+      id, exam_type, type, category, part, unit, topic, tags, difficulty, stem, choices, answer,
       acceptable_answers, explanation, source_type, source_note, source_asset_id,
       source_page, extraction_confidence, answer_status, review_status, created_at, updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     question.examType,
     question.type,
     question.category,
+    question.part || "",
+    question.unit || "",
+    question.topic || "",
     JSON.stringify(question.tags),
     question.difficulty,
     question.stem,
