@@ -27,6 +27,16 @@ import { getDefaultCriteria, getCurriculum } from "@/lib/curriculum";
 import { EXAM_TYPES } from "@/lib/types";
 import type { AppState, ExamType, Question, QuestionDraft, QuestionType, WrongNote } from "@/lib/types";
 import {
+  answerChoice,
+  feedbackBanner,
+  navItem,
+  providerStatus,
+  questionListItem,
+  tabButton,
+  ui,
+  validationStatus,
+} from "@/lib/ui-classes";
+import {
   getChoiceCount,
   getQuestionTypeLabel,
   normalizeQuestionType,
@@ -481,36 +491,32 @@ export default function Home() {
 
   if (!state) {
     return (
-      <main className="flex min-h-screen items-center justify-center gap-3 text-ink-secondary">
-        <Loader2 className="animate-spin" size={24} />
+      <main className={ui.layout.loading}>
+        <Loader2 className={ui.icon.spin} size={24} />
         <span>cbt_vibe</span>
       </main>
     );
   }
 
   return (
-    <main className="grid min-h-screen grid-cols-[260px_minmax(0,1fr)] max-[1100px]:grid-cols-1">
-      <aside className="flex flex-col gap-6 border-r border-hairline bg-surface p-[18px_14px] max-[1100px]:sticky max-[1100px]:top-0 max-[1100px]:z-10 max-[1100px]:border-b max-[1100px]:border-r-0">
-        <div className="flex items-center gap-3 px-2 py-1.5">
-          <span className="flex size-[34px] items-center justify-center rounded-lg bg-ink text-[13px] font-bold text-on-primary">cv</span>
+    <main className={ui.layout.app}>
+      <aside className={ui.layout.sidebar}>
+        <div className={ui.brand.row}>
+          <span className={ui.brand.mark}>cv</span>
           <div>
-            <strong className="block text-base leading-[1.3]">cbt_vibe</strong>
-            <span className="block text-xs leading-[1.33] text-ink-muted">local study</span>
+            <strong className={ui.brand.name}>cbt_vibe</strong>
+            <span className={ui.brand.subtitle}>local study</span>
           </div>
         </div>
 
-        <nav className="flex flex-col gap-1 max-[1100px]:grid max-[1100px]:grid-cols-3 max-[680px]:grid-cols-2" aria-label="주요 메뉴">
+        <nav className={ui.nav.list} aria-label="주요 메뉴">
           {navItems.map((item) => {
             const Icon = item.icon;
 
             return (
               <button
                 key={item.key}
-                className={
-                  view === item.key
-                    ? "relative flex min-h-[42px] w-full items-center gap-2.5 rounded-lg border-0 bg-canvas-soft px-3 py-2.5 text-left font-semibold text-ink before:absolute before:left-1 before:top-1/2 before:h-[18px] before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-primary"
-                    : "relative flex min-h-[42px] w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-2.5 text-left text-ink-secondary hover:bg-canvas-soft"
-                }
+                className={navItem(view === item.key)}
                 onClick={() => setView(item.key)}
                 type="button"
               >
@@ -521,36 +527,36 @@ export default function Home() {
           })}
         </nav>
 
-        <div className="mt-auto rounded-lg border border-hairline p-2.5 max-[1100px]:hidden">
-          <div className="grid min-h-7 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-[13px] text-ink-muted">
+        <div className={ui.provider.card}>
+          <div className={ui.provider.row}>
             <CircleDot size={14} />
             <span>OpenAI</span>
-            <b className={state.env.openaiConfigured ? "text-[11px] text-accent-green" : "text-[11px] text-ink-faint"}>
+            <b className={providerStatus(state.env.openaiConfigured)}>
               {state.env.openaiConfigured ? "ON" : "OFF"}
             </b>
           </div>
-          <div className="grid min-h-7 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-[13px] text-ink-muted">
+          <div className={ui.provider.row}>
             <CircleDot size={14} />
             <span>Gemini</span>
-            <b className={state.env.geminiConfigured ? "text-[11px] text-accent-green" : "text-[11px] text-ink-faint"}>
+            <b className={providerStatus(state.env.geminiConfigured)}>
               {state.env.geminiConfigured ? "ON" : "OFF"}
             </b>
           </div>
         </div>
       </aside>
 
-      <section className="flex min-w-0 flex-col gap-[18px] p-[18px] max-[680px]:p-3">
-        <header className="flex items-center justify-between gap-4 max-[680px]:flex-col max-[680px]:items-stretch">
+      <section className={ui.layout.content}>
+        <header className={ui.layout.header}>
           <div>
-            <p className="m-0 text-xs font-semibold leading-[1.33] text-primary">AI CBT MVP</p>
-            <h1 className="m-0 text-[26px] leading-[1.23]">{navItems.find((item) => item.key === view)?.label}</h1>
+            <p className={ui.section.eyebrow}>AI CBT MVP</p>
+            <h1 className={ui.section.pageTitle}>{navItems.find((item) => item.key === view)?.label}</h1>
           </div>
-          <div className="flex items-center gap-2 max-[680px]:w-full">
-            <label className="flex min-h-10 items-center rounded-full border border-hairline bg-surface px-3 max-[680px]:flex-1">
-              <span className="sr-only">시험 종류</span>
+          <div className={ui.layout.toolbar}>
+            <label className={ui.field.examShell}>
+              <span className={ui.accessibility.srOnly}>시험 종류</span>
               <select
                 aria-label="시험 종류"
-                className="min-w-[132px] border-0 bg-transparent text-sm font-semibold text-ink outline-none max-[680px]:w-full"
+                className={ui.field.examSelect}
                 value={examType}
                 onChange={(event) => {
                   const nextExamType = event.target.value as ExamType;
@@ -574,28 +580,28 @@ export default function Home() {
                 ))}
               </select>
             </label>
-            <label className="flex min-h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-3 focus-within:border-primary focus-within:shadow-[rgba(0,117,222,0.14)_0_0_0_3px] max-[680px]:flex-1">
+            <label className={ui.field.searchShell}>
               <Search size={16} />
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="min-w-[210px] border-0 bg-transparent outline-none max-[680px]:min-w-0 max-[680px]:w-full"
+                className={ui.field.searchInput}
                 placeholder="검색"
               />
             </label>
-            <button className="inline-flex size-10 items-center justify-center rounded-full border border-hairline bg-surface" onClick={() => void loadState()} title="새로고침" type="button">
+            <button className={ui.button.icon} onClick={() => void loadState()} title="새로고침" type="button">
               <RefreshCw size={17} />
             </button>
-            <button className="inline-flex size-10 items-center justify-center rounded-full border border-hairline bg-surface" title="설정" type="button">
+            <button className={ui.button.icon} title="설정" type="button">
               <Settings size={17} />
             </button>
           </div>
         </header>
 
         {statusMessage ? (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-hairline bg-surface px-3 py-2.5 text-sm text-ink-secondary shadow-soft" role="status">
+          <div className={ui.status} role="status">
             {statusMessage}
-            <button className="flex items-center border-0 bg-transparent" onClick={() => setStatusMessage("")} type="button" title="닫기">
+            <button className={ui.button.close} onClick={() => setStatusMessage("")} type="button" title="닫기">
               <X size={14} />
             </button>
           </div>
@@ -684,56 +690,56 @@ export default function Home() {
 
 function DashboardView({ state, onStart }: { state: AppState; onStart: () => void }) {
   return (
-    <div className="grid gap-4 grid-cols-[1.2fr_0.8fr] max-[1100px]:grid-cols-1">
-      <section className="flex items-center justify-between rounded-lg border border-hairline bg-secondary p-5 text-on-primary max-[680px]:flex-col max-[680px]:items-stretch">
+    <div className={ui.layout.dashboardGrid}>
+      <section className={ui.panel.darkCallout}>
         <div>
-          <p className="m-0 text-xs font-semibold leading-[1.33] text-on-primary">오늘의 학습</p>
-          <h2 className="m-0 mt-1.5 max-w-[520px] text-[26px] leading-[1.23]">기록이 쌓일수록 오답 흐름이 선명해집니다.</h2>
+          <p className={ui.section.darkEyebrow}>오늘의 학습</p>
+          <h2 className={ui.section.calloutTitle}>기록이 쌓일수록 오답 흐름이 선명해집니다.</h2>
         </div>
-        <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-primary px-4 font-medium text-on-primary active:bg-primary-active" onClick={onStart} type="button">
+        <button className={ui.button.primary} onClick={onStart} type="button">
           <BookOpen size={18} />
           이어서 풀기
         </button>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
+      <section className={ui.layout.metricGrid}>
         <Metric label="문제" value={`${state.stats.totalQuestions}`} />
         <Metric label="풀이" value={`${state.stats.totalAttempts}`} />
         <Metric label="정답률" value={`${state.stats.accuracy}%`} />
         <Metric label="오답" value={`${state.stats.openWrongNotes}`} />
       </section>
 
-      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
+      <section className={ui.panel.surface}>
         <PanelHeader title="최근 풀이" icon={History} />
-        <div className="flex flex-col">
+        <div className={ui.layout.stack}>
           {state.recentAttempts.length === 0 ? (
             <EmptyLine label="풀이 기록 없음" />
           ) : (
             state.recentAttempts.map((attempt) => (
-              <div className="grid min-h-12 grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2.5 border-t border-hairline py-2.5 max-[680px]:flex max-[680px]:flex-col max-[680px]:items-stretch max-[680px]:gap-1.5" key={attempt.id}>
+              <div className={ui.list.row} key={attempt.id}>
                 <span className={attempt.isCorrect ? "inline-block size-2 rounded-full bg-accent-green" : "inline-block size-2 rounded-full bg-danger"} />
-                <strong className="overflow-hidden text-ellipsis whitespace-nowrap text-sm">{attempt.questionStem}</strong>
-                <span className="text-[13px] text-ink-muted">{attempt.category}</span>
-                <b className="text-[13px] text-ink-muted">{attempt.isCorrect ? "정답" : "오답"}</b>
+                <strong className={ui.text.listQuestion}>{attempt.questionStem}</strong>
+                <span className={ui.text.muted13}>{attempt.category}</span>
+                <b className={ui.text.muted13}>{attempt.isCorrect ? "정답" : "오답"}</b>
               </div>
             ))
           )}
         </div>
       </section>
 
-      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
+      <section className={ui.panel.surface}>
         <PanelHeader title="카테고리" icon={BadgeCheck} />
-        <div className="flex flex-col">
+        <div className={ui.layout.stack}>
           {state.stats.categories.length === 0 ? (
             <EmptyLine label="카테고리 기록 없음" />
           ) : (
             state.stats.categories.map((category) => (
-              <div className="grid min-h-12 grid-cols-[minmax(90px,0.45fr)_1fr_auto] items-center gap-3 border-t border-hairline" key={category.category}>
-                <span className="text-sm">{category.category}</span>
-                <div className="h-2 overflow-hidden rounded-full bg-canvas-soft">
-                  <i className="block h-full bg-primary" style={{ width: `${category.accuracy}%` }} />
+              <div className={ui.list.statRow} key={category.category}>
+              <span className={ui.text.sm}>{category.category}</span>
+              <div className={ui.progressTrack}>
+                <i className={ui.progressBar} style={{ width: `${category.accuracy}%` }} />
                 </div>
-                <b className="text-sm">{category.accuracy}%</b>
+              <b className={ui.text.sm}>{category.accuracy}%</b>
               </div>
             ))
           )}
@@ -765,66 +771,62 @@ function PracticeView({
   setSelectedAnswer: (answer: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_340px] gap-4 max-[1100px]:grid-cols-1">
-      <section className="min-h-[calc(100vh-120px)] min-w-0 rounded-lg border border-hairline bg-surface p-5 max-[1100px]:min-h-0">
+    <div className={ui.layout.panelGrid}>
+      <section className={ui.panel.practice}>
         {activeQuestion ? (
           <>
-            <div className="flex flex-wrap gap-1.5">
+            <div className={ui.layout.badgeGroup}>
               <Badge>{getQuestionTypeLabel(activeQuestion.type)}</Badge>
               <Badge>{activeQuestion.category}</Badge>
               <Badge>{activeQuestion.difficulty}</Badge>
             </div>
-            <h2 className="m-[28px_0] text-2xl leading-[1.45]">{activeQuestion.stem}</h2>
+            <h2 className={ui.section.questionTitle}>{activeQuestion.stem}</h2>
 
             {activeQuestion.type === "short_answer" ? (
-              <label className="flex flex-col gap-2">
-                <span className="text-[13px] text-ink-muted">답안</span>
+              <label className={ui.list.answerLabel}>
+                <span className={ui.field.label}>답안</span>
                 <input
-                  className="min-h-[38px] w-full rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
+                  className={ui.field.answer}
                   value={selectedAnswer}
                   onChange={(event) => setSelectedAnswer(event.target.value)}
                   placeholder="정답 입력"
                 />
               </label>
             ) : (
-              <div className="grid gap-2.5">
+              <div className={ui.list.answerChoices}>
                 {activeQuestion.choices.map((choice, index) => (
                   <button
-                    className={
-                      selectedAnswer === choice
-                        ? "grid min-h-14 w-full grid-cols-[34px_minmax(0,1fr)] items-center gap-3 rounded-lg border border-primary bg-surface px-3 py-2 text-left text-ink shadow-[rgba(0,117,222,0.16)_0_0_0_3px]"
-                        : "grid min-h-14 w-full grid-cols-[34px_minmax(0,1fr)] items-center gap-3 rounded-lg border border-hairline bg-surface px-3 py-2 text-left text-ink hover:border-primary"
-                    }
+                    className={answerChoice(selectedAnswer === choice)}
                     key={choice}
                     onClick={() => setSelectedAnswer(choice)}
                     type="button"
                   >
-                    <span className="flex size-8 items-center justify-center rounded-full bg-canvas-soft font-semibold">{index + 1}</span>
-                    <b className="font-medium leading-[1.45]">{choice}</b>
+                    <span className={ui.answerChoice.marker}>{index + 1}</span>
+                    <b className={ui.text.question}>{choice}</b>
                   </button>
                 ))}
               </div>
             )}
 
             {answered ? (
-              <div className={answered.isCorrect ? "mt-[18px] rounded-lg border border-[rgba(26,174,57,0.24)] bg-[#effaf1] p-3.5" : "mt-[18px] rounded-lg border border-[rgba(217,45,32,0.22)] bg-danger-soft p-3.5"}>
-                <strong className="block">{answered.isCorrect ? "정답" : "오답"}</strong>
-                <span className="block text-[15px] leading-[1.5]">정답: {answered.answer}</span>
-                {activeQuestion.explanation ? <p className="text-[15px] leading-[1.5]">{activeQuestion.explanation}</p> : null}
+              <div className={feedbackBanner(answered.isCorrect)}>
+                <strong className={ui.text.block}>{answered.isCorrect ? "정답" : "오답"}</strong>
+                <span className={ui.text.answer}>정답: {answered.answer}</span>
+                {activeQuestion.explanation ? <p className={ui.text.body15}>{activeQuestion.explanation}</p> : null}
               </div>
             ) : null}
 
-            <div className="mt-4 flex items-center gap-2">
+            <div className={ui.layout.actionRow}>
               <button
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-primary px-4 font-medium text-on-primary active:bg-primary-active"
+                className={ui.button.primary}
                 disabled={!selectedAnswer || busy}
                 onClick={onSubmit}
                 type="button"
               >
-                {busy ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
+                {busy ? <Loader2 className={ui.icon.spin} size={18} /> : <Check size={18} />}
                 채점
               </button>
-              <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-hairline bg-surface px-3.5 text-ink" onClick={() => onGenerateSimilar(activeQuestion)} type="button">
+              <button className={ui.button.secondary} onClick={() => onGenerateSimilar(activeQuestion)} type="button">
                 <Sparkles size={17} />
                 유사 문제
               </button>
@@ -835,22 +837,18 @@ function PracticeView({
         )}
       </section>
 
-      <aside className="max-h-[calc(100vh-120px)] min-w-0 overflow-hidden rounded-lg border border-hairline bg-surface p-5 max-[1100px]:max-h-none">
+      <aside className={ui.panel.practiceList}>
         <PanelHeader title="문제 목록" icon={LibraryBig} />
-        <div className="flex max-h-[calc(100vh-180px)] flex-col gap-1.5 overflow-auto">
+        <div className={ui.list.dividerStack}>
           {filteredQuestions.map((question) => (
             <button
-              className={
-                question.id === activeQuestion?.id
-                  ? "block w-full rounded-lg border border-hairline bg-canvas-soft p-2.5 text-left text-ink"
-                  : "block w-full rounded-lg border border-transparent bg-transparent p-2.5 text-left text-ink hover:border-hairline hover:bg-canvas-soft"
-              }
+              className={questionListItem(question.id === activeQuestion?.id)}
               key={question.id}
               onClick={() => onChoose(question.id)}
               type="button"
             >
-              <span className="mb-1 block text-xs text-ink-muted">{question.category}</span>
-              <strong className="line-clamp-2 block text-sm font-medium leading-[1.38]">{question.stem}</strong>
+              <span className={ui.list.questionMeta}>{question.category}</span>
+              <strong className={ui.list.questionTitle}>{question.stem}</strong>
             </button>
           ))}
         </div>
@@ -873,9 +871,9 @@ function WrongNotesView({
   onUpdate: (questionId: string, updates: Partial<WrongNote>) => void;
 }) {
   return (
-    <section className="min-h-[calc(100vh-120px)] min-w-0 rounded-lg border border-hairline bg-surface p-5 max-[1100px]:min-h-0">
+    <section className={ui.panel.tall}>
       <PanelHeader title="오답노트" icon={NotebookTabs} />
-      <div className="flex flex-col">
+      <div className={ui.layout.stack}>
         {wrongNotes.length === 0 ? (
           <EmptyLine label="오답 기록 없음" />
         ) : (
@@ -887,27 +885,27 @@ function WrongNotesView({
             }
 
             return (
-              <article className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 border-t border-hairline py-4 max-[680px]:flex max-[680px]:flex-col max-[680px]:items-stretch" key={note.questionId}>
+              <article className={ui.list.noteRow} key={note.questionId}>
                 <div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className={ui.layout.badgeGroup}>
                     <Badge>{question.category}</Badge>
                     <Badge>{note.resolvedAt ? "해결" : "복습"}</Badge>
                     <Badge>{`${note.wrongCount}회`}</Badge>
                   </div>
-                  <h3 className="my-2.5 text-[17px] leading-[1.45]">{question.stem}</h3>
+                  <h3 className={ui.list.resultTitle}>{question.stem}</h3>
                   <textarea
-                    className="min-h-[74px] w-full resize-y rounded border border-hairline p-2"
+                    className={ui.field.wrongMemo}
                     value={note.memo}
                     onChange={(event) => onUpdate(note.questionId, { memo: event.target.value })}
                     placeholder="오답 메모"
                   />
                 </div>
-                <div className="mt-4 flex items-center gap-2">
-                  <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-hairline bg-surface px-3.5 text-ink" onClick={() => onChoose(question.id)} type="button">
+                <div className={ui.layout.actionRow}>
+                  <button className={ui.button.secondary} onClick={() => onChoose(question.id)} type="button">
                     <BookOpen size={16} />
                     풀기
                   </button>
-                  <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-hairline bg-surface px-3.5 text-ink" onClick={() => onGenerateSimilar(question)} type="button">
+                  <button className={ui.button.secondary} onClick={() => onGenerateSimilar(question)} type="button">
                     <Sparkles size={16} />
                     확장
                   </button>
@@ -939,10 +937,10 @@ function QuestionBankView({
   const choiceCount = getChoiceCount(form.type);
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_340px] gap-4 max-[1100px]:grid-cols-1">
-      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
+    <div className={ui.layout.panelGrid}>
+      <section className={ui.panel.surface}>
         <PanelHeader title="문제 등록" icon={Plus} />
-        <div className="mb-3 grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
+        <div className={ui.layout.fieldGrid}>
           <SelectField
             label="시험 종류"
             value={form.examType}
@@ -979,17 +977,17 @@ function QuestionBankView({
             onChange={(value) => setForm({ ...form, tags: value })}
           />
         </div>
-        <label className="mb-3 flex flex-col gap-1.5">
-          <span className="text-[13px] text-ink-muted">문제 지문</span>
+        <label className={ui.field.groupWithMargin}>
+          <span className={ui.field.label}>문제 지문</span>
           <textarea
-            className="min-h-[104px] w-full resize-y rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
+            className={ui.field.textarea}
             value={form.stem}
             onChange={(event) => setForm({ ...form, stem: event.target.value })}
           />
         </label>
 
         {choiceCount > 0 ? (
-          <div className="mb-3 grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
+          <div className={ui.layout.fieldGrid}>
             {Array.from({ length: choiceCount }).map((_, index) => (
               <TextField
                 key={index}
@@ -1005,7 +1003,7 @@ function QuestionBankView({
           </div>
         ) : null}
 
-        <div className="mb-3 grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
+        <div className={ui.layout.fieldGrid}>
           <TextField
             label="정답"
             value={form.answer}
@@ -1018,30 +1016,30 @@ function QuestionBankView({
           />
         </div>
 
-        <label className="mb-3 flex flex-col gap-1.5">
-          <span className="text-[13px] text-ink-muted">해설</span>
+        <label className={ui.field.groupWithMargin}>
+          <span className={ui.field.label}>해설</span>
           <textarea
-            className="min-h-[104px] w-full resize-y rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
+            className={ui.field.textarea}
             value={form.explanation}
             onChange={(event) => setForm({ ...form, explanation: event.target.value })}
           />
         </label>
 
-        <div className="mt-4 flex items-center gap-2">
-          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-primary px-4 font-medium text-on-primary active:bg-primary-active" disabled={busy} onClick={onSave} type="button">
-            {busy ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+        <div className={ui.layout.actionRow}>
+          <button className={ui.button.primary} disabled={busy} onClick={onSave} type="button">
+            {busy ? <Loader2 className={ui.icon.spin} size={18} /> : <Save size={18} />}
             저장
           </button>
         </div>
       </section>
 
-      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
+      <section className={ui.panel.surface}>
         <PanelHeader title="문제 은행" icon={LibraryBig} />
-        <div className="flex max-h-[calc(100vh-220px)] flex-col gap-1.5 overflow-auto">
+        <div className={ui.list.resultPanel}>
           {filteredQuestions.map((question) => (
-            <button className="block w-full rounded-lg border border-transparent bg-transparent p-2.5 text-left text-ink hover:border-hairline hover:bg-canvas-soft" key={question.id} onClick={() => onChoose(question.id)} type="button">
-              <span className="mb-1 block text-xs text-ink-muted">{`${getQuestionTypeLabel(question.type)} · ${question.category}`}</span>
-              <strong className="line-clamp-2 block text-sm font-medium leading-[1.38]">{question.stem}</strong>
+            <button className={ui.button.listItem} key={question.id} onClick={() => onChoose(question.id)} type="button">
+              <span className={ui.list.questionMeta}>{`${getQuestionTypeLabel(question.type)} · ${question.category}`}</span>
+              <strong className={ui.list.questionTitle}>{question.stem}</strong>
             </button>
           ))}
         </div>
@@ -1064,37 +1062,37 @@ function ImportView({
   const validCount = preview.filter((item) => item.errors.length === 0).length;
 
   return (
-    <section className="min-h-[calc(100vh-120px)] min-w-0 rounded-lg border border-hairline bg-surface p-5 max-[1100px]:min-h-0">
+    <section className={ui.panel.tall}>
       <PanelHeader title="엑셀 가져오기" icon={FileSpreadsheet} />
-      <label className="relative flex min-h-[118px] items-center justify-center gap-2.5 rounded-xl border border-dashed border-ink-faint bg-canvas-soft text-ink-secondary">
+      <label className={ui.upload}>
         <FileSpreadsheet size={22} />
         <span>xlsx 파일 선택</span>
         <input
-          className="absolute inset-0 cursor-pointer opacity-0"
+          className={ui.uploadInput}
           accept=".xlsx,.xls"
           onChange={(event) => onFile(event.target.files?.[0] || null)}
           type="file"
         />
       </label>
 
-      <div className="mt-4 flex items-center justify-between gap-2">
+      <div className={ui.layout.actionSummary}>
         <span>{`검증 통과 ${validCount} / ${preview.length}`}</span>
-        <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-primary px-4 font-medium text-on-primary active:bg-primary-active" disabled={validCount === 0 || busy} onClick={onSave} type="button">
-          {busy ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+        <button className={ui.button.primary} disabled={validCount === 0 || busy} onClick={onSave} type="button">
+          {busy ? <Loader2 className={ui.icon.spin} size={18} /> : <Save size={18} />}
           저장
         </button>
       </div>
 
-      <div className="flex flex-col">
+      <div className={ui.layout.stack}>
         {preview.length === 0 ? (
           <EmptyLine label="가져오기 대기" />
         ) : (
           preview.map((item) => (
-            <div className={item.errors.length ? "grid min-h-[52px] grid-cols-[46px_92px_minmax(0,1fr)_minmax(120px,0.4fr)] items-center gap-3 border-t border-hairline max-[680px]:flex max-[680px]:flex-col max-[680px]:items-stretch max-[680px]:gap-1.5" : "grid min-h-[52px] grid-cols-[46px_92px_minmax(0,1fr)_minmax(120px,0.4fr)] items-center gap-3 border-t border-hairline max-[680px]:flex max-[680px]:flex-col max-[680px]:items-stretch max-[680px]:gap-1.5"} key={item.rowNumber}>
+            <div className={ui.list.previewRow} key={item.rowNumber}>
               <b>{item.rowNumber}</b>
-              <span className="text-[13px] text-ink-muted">{getQuestionTypeLabel(item.question.type)}</span>
-              <strong className="overflow-hidden text-ellipsis whitespace-nowrap">{item.question.stem || "빈 지문"}</strong>
-              <em className={item.errors.length ? "text-[13px] not-italic text-danger" : "text-[13px] not-italic text-ink-muted"}>{item.errors.length ? item.errors.join(" ") : "OK"}</em>
+              <span className={ui.text.muted13}>{getQuestionTypeLabel(item.question.type)}</span>
+              <strong className={ui.text.nowrap}>{item.question.stem || "빈 지문"}</strong>
+              <em className={validationStatus(item.errors.length > 0)}>{item.errors.length ? item.errors.join(" ") : "OK"}</em>
             </div>
           ))
         )}
@@ -1124,11 +1122,11 @@ function AiGenerateView(props: AiGenerateViewProps) {
   const isPhotoMode = props.aiMode === "photo";
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="inline-flex self-start rounded-lg border border-hairline bg-canvas-soft p-1" role="tablist">
+      <div className={ui.layout.aiStack}>
+      <div className={ui.layout.tabBar} role="tablist">
         <button
           aria-selected={!isPhotoMode}
-          className={!isPhotoMode ? "inline-flex min-h-9 items-center gap-1.5 rounded-md bg-surface px-3 text-sm font-semibold text-ink shadow-sm" : "inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-sm text-ink-muted"}
+          className={tabButton(!isPhotoMode)}
           onClick={() => props.onModeChange("generate")}
           role="tab"
           type="button"
@@ -1138,7 +1136,7 @@ function AiGenerateView(props: AiGenerateViewProps) {
         </button>
         <button
           aria-selected={isPhotoMode}
-          className={isPhotoMode ? "inline-flex min-h-9 items-center gap-1.5 rounded-md bg-surface px-3 text-sm font-semibold text-ink shadow-sm" : "inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-sm text-ink-muted"}
+          className={tabButton(isPhotoMode)}
           onClick={() => props.onModeChange("photo")}
           role="tab"
           type="button"
@@ -1176,7 +1174,7 @@ function CriteriaFields<T extends CriteriaForm>({
   const parts = getCurriculum(form.examType);
 
   return (
-    <div className="col-span-2 grid grid-cols-3 gap-3 rounded-lg border border-hairline bg-canvas-soft p-3 max-[680px]:col-span-1 max-[680px]:grid-cols-1">
+    <div className={ui.layout.criteriaGrid}>
       <SelectField
         label="대단원 · 기본 목차"
         value={form.part}
@@ -1210,10 +1208,10 @@ function PhotoImportView({
   setForm,
 }: AiGenerateViewProps) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_340px] gap-4 max-[1100px]:grid-cols-1">
-      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
+    <div className={ui.layout.panelGrid}>
+      <section className={ui.panel.surface}>
         <PanelHeader title="문제집 사진 인식" icon={ImagePlus} />
-        <div className="mb-3 grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
+        <div className={ui.layout.fieldGrid}>
           <SelectField
             label="시험 종류"
             value={form.examType}
@@ -1235,10 +1233,10 @@ function PhotoImportView({
           <CriteriaFields form={form} setForm={setForm} />
           <TextField label="카테고리" value={form.category} onChange={(value) => setForm({ ...form, category: value })} />
           <TextField label="난이도" value={form.difficulty} onChange={(value) => setForm({ ...form, difficulty: value })} />
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[13px] text-ink-muted">최대 추출 개수</span>
+          <label className={ui.field.group}>
+            <span className={ui.field.label}>최대 추출 개수</span>
             <input
-              className="min-h-[38px] w-full rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
+              className={ui.field.input}
               max={10}
               min={1}
               type="number"
@@ -1248,12 +1246,12 @@ function PhotoImportView({
           </label>
         </div>
 
-        <label className="relative mb-3 flex min-h-[118px] cursor-pointer items-center justify-center gap-2.5 rounded-xl border border-dashed border-ink-faint bg-canvas-soft text-ink-secondary">
+        <label className={ui.uploadClickable}>
           <ImagePlus size={22} />
           <span>JPG, PNG, WEBP 사진 선택</span>
           <input
             accept="image/jpeg,image/png,image/webp"
-            className="absolute inset-0 cursor-pointer opacity-0"
+            className={ui.uploadInput}
             multiple
             onChange={(event) => onPhotoFilesChange(Array.from(event.target.files || []))}
             type="file"
@@ -1261,13 +1259,13 @@ function PhotoImportView({
         </label>
 
         {photoFiles.length > 0 ? (
-          <div className="mb-3 flex flex-col gap-1.5 rounded-lg border border-hairline bg-canvas-soft p-3 text-sm">
+          <div className={ui.criteria}>
             {photoFiles.map((file, index) => (
-              <div className="flex items-center justify-between gap-2" key={`${file.name}-${file.lastModified}`}>
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap">{file.name}</span>
+              <div className={ui.list.fileRow} key={`${file.name}-${file.lastModified}`}>
+                <span className={ui.text.fileName}>{file.name}</span>
                 <button
                   aria-label={`${file.name} 제거`}
-                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-surface hover:text-ink"
+                  className={ui.button.smallIcon}
                   onClick={() => onPhotoFilesChange(photoFiles.filter((_, fileIndex) => fileIndex !== index))}
                   title="사진 제거"
                   type="button"
@@ -1279,36 +1277,36 @@ function PhotoImportView({
           </div>
         ) : null}
 
-        <label className="mb-3 flex flex-col gap-1.5">
-          <span className="text-[13px] text-ink-muted">추출 요청</span>
+        <label className={ui.field.groupWithMargin}>
+          <span className={ui.field.label}>추출 요청</span>
           <textarea
-            className="min-h-[104px] w-full resize-y rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
+            className={ui.field.textarea}
             value={form.instruction}
             onChange={(event) => setForm({ ...form, instruction: event.target.value })}
           />
         </label>
 
-        <div className="mt-4 flex items-center gap-2">
-          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-primary px-4 font-medium text-on-primary active:bg-primary-active" disabled={busy || photoFiles.length === 0} onClick={onImportPhotos} type="button">
-            {busy ? <Loader2 className="animate-spin" size={18} /> : <ImagePlus size={18} />}
+        <div className={ui.layout.actionRow}>
+          <button className={ui.button.primary} disabled={busy || photoFiles.length === 0} onClick={onImportPhotos} type="button">
+            {busy ? <Loader2 className={ui.icon.spin} size={18} /> : <ImagePlus size={18} />}
             사진에서 추출
           </button>
-          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-hairline bg-surface px-3.5 text-ink" disabled={generatedQuestions.length === 0 || busy} onClick={onSave} type="button">
+          <button className={ui.button.secondary} disabled={generatedQuestions.length === 0 || busy} onClick={onSave} type="button">
             <Save size={17} />
             검수 완료 저장
           </button>
         </div>
       </section>
 
-      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
+      <section className={ui.panel.surface}>
         <PanelHeader title="사진 변환 검수" icon={ClipboardList} />
-        <div className="flex max-h-[calc(100vh-180px)] flex-col gap-0 overflow-auto">
+        <div className={ui.list.dividerStack}>
           {generatedQuestions.length === 0 ? (
             <EmptyLine label="사진 변환 결과 없음" />
           ) : (
             generatedQuestions.map((question, index) => (
-              <article className="block border-t border-hairline py-4" key={`${question.stem}-${index}`}>
-                <div className="flex flex-wrap gap-1.5">
+              <article className={ui.list.resultItem} key={`${question.stem}-${index}`}>
+                <div className={ui.layout.badgeGroup}>
                   <Badge>{getQuestionTypeLabel(question.type)}</Badge>
                   <Badge>{question.category}</Badge>
                   {question.part ? <Badge>{question.part}</Badge> : null}
@@ -1317,16 +1315,16 @@ function PhotoImportView({
                   {question.answerStatus === "missing" ? <Badge>정답 확인 필요</Badge> : null}
                 </div>
                 <textarea
-                  className="my-2.5 min-h-[82px] w-full resize-y rounded border border-hairline bg-surface px-2 py-1.5 text-[17px] leading-[1.45] text-ink outline-none focus:border-primary"
+                  className={ui.field.previewStem}
                   value={question.stem}
                   onChange={(event) => onUpdateQuestion(index, { stem: event.target.value, validationErrors: [] })}
                 />
                 {question.choices.length ? (
-                  <ol className="my-2.5 flex flex-col gap-1.5 pl-[22px]">
+                  <ol className={ui.list.choices}>
                     {question.choices.map((choice, choiceIndex) => (
                       <li key={`${index}-${choiceIndex}`}>
                         <input
-                          className="min-h-[34px] w-full rounded border border-hairline bg-surface px-2 py-1 text-sm text-ink outline-none focus:border-primary"
+                          className={ui.field.previewChoice}
                           value={choice}
                           onChange={(event) =>
                             onUpdateQuestion(index, {
@@ -1339,16 +1337,16 @@ function PhotoImportView({
                     ))}
                   </ol>
                 ) : null}
-                <label className="mt-2.5 flex flex-col gap-1.5">
-                  <span className="text-[13px] text-ink-muted">정답</span>
+                <label className={ui.field.resultGroup}>
+                  <span className={ui.field.label}>정답</span>
                   <input
-                    className="min-h-[36px] w-full rounded border border-hairline bg-surface px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
+                    className={ui.field.previewAnswer}
                     value={question.answer}
                     onChange={(event) => onUpdateQuestion(index, { answer: event.target.value, answerStatus: event.target.value.trim() ? "confirmed" : "missing", validationErrors: [] })}
                   />
                 </label>
-                {question.validationErrors?.length ? <p className="mt-2 text-[13px] text-danger">{question.validationErrors.join(" ")}</p> : null}
-                {question.extractionConfidence !== undefined ? <p className="mt-2 text-[12px] text-ink-muted">추출 신뢰도 {Math.round(question.extractionConfidence * 100)}%</p> : null}
+                {question.validationErrors?.length ? <p className={ui.text.validationError}>{question.validationErrors.join(" ")}</p> : null}
+                {question.extractionConfidence !== undefined ? <p className={ui.text.confidence}>추출 신뢰도 {Math.round(question.extractionConfidence * 100)}%</p> : null}
               </article>
             ))
           )}
@@ -1378,10 +1376,10 @@ function LegacyAiGenerateView({
   setForm: (form: AiForm) => void;
 }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_340px] gap-4 max-[1100px]:grid-cols-1">
-      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
+    <div className={ui.layout.panelGrid}>
+      <section className={ui.panel.surface}>
         <PanelHeader title="AI 생성" icon={Brain} />
-        <div className="mb-3 grid grid-cols-2 gap-3 max-[680px]:grid-cols-1">
+        <div className={ui.layout.fieldGrid}>
           <SelectField
             label="시험 종류"
             value={form.examType}
@@ -1418,10 +1416,10 @@ function LegacyAiGenerateView({
             value={form.difficulty}
             onChange={(value) => setForm({ ...form, difficulty: value })}
           />
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[13px] text-ink-muted">개수</span>
+          <label className={ui.field.group}>
+            <span className={ui.field.label}>개수</span>
             <input
-              className="min-h-[38px] w-full rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
+              className={ui.field.input}
               max={10}
               min={1}
               type="number"
@@ -1442,22 +1440,22 @@ function LegacyAiGenerateView({
           />
         </div>
 
-        <label className="mb-3 flex flex-col gap-1.5">
-          <span className="text-[13px] text-ink-muted">요청</span>
+        <label className={ui.field.groupWithMargin}>
+          <span className={ui.field.label}>요청</span>
           <textarea
-            className="min-h-[104px] w-full resize-y rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]"
+            className={ui.field.textarea}
             value={form.instruction}
             onChange={(event) => setForm({ ...form, instruction: event.target.value })}
           />
         </label>
 
-        <div className="mt-4 flex items-center gap-2">
-          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-primary px-4 font-medium text-on-primary active:bg-primary-active" disabled={busy} onClick={onGenerate} type="button">
-            {busy ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+        <div className={ui.layout.actionRow}>
+          <button className={ui.button.primary} disabled={busy} onClick={onGenerate} type="button">
+            {busy ? <Loader2 className={ui.icon.spin} size={18} /> : <Sparkles size={18} />}
             생성
           </button>
           <button
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-hairline bg-surface px-3.5 text-ink"
+            className={ui.button.secondary}
             disabled={generatedQuestions.length === 0 || busy}
             onClick={onSave}
             type="button"
@@ -1468,30 +1466,30 @@ function LegacyAiGenerateView({
         </div>
       </section>
 
-      <section className="min-w-0 rounded-lg border border-hairline bg-surface p-5">
+      <section className={ui.panel.surface}>
         <PanelHeader title="검수 목록" icon={ClipboardList} />
-        <div className="flex max-h-[calc(100vh-180px)] flex-col gap-0 overflow-auto">
+        <div className={ui.list.dividerStack}>
           {generatedQuestions.length === 0 ? (
             <EmptyLine label="생성 결과 없음" />
           ) : (
             generatedQuestions.map((question, index) => (
-              <article className="block border-t border-hairline py-4" key={`${question.stem}-${index}`}>
-                <div className="flex flex-wrap gap-1.5">
+              <article className={ui.list.resultItem} key={`${question.stem}-${index}`}>
+                <div className={ui.layout.badgeGroup}>
                   <Badge>{getQuestionTypeLabel(question.type)}</Badge>
                   <Badge>{question.category}</Badge>
                   <Badge>{question.difficulty}</Badge>
                   {question.part ? <Badge>{question.part}</Badge> : null}
                   {question.topic ? <Badge>{question.topic}</Badge> : null}
                 </div>
-                <h3 className="my-2.5 text-[17px] leading-[1.45]">{question.stem}</h3>
+                <h3 className={ui.list.resultTitle}>{question.stem}</h3>
                 {question.choices.length ? (
-                  <ol className="my-2.5 pl-[22px]">
+                  <ol className={ui.list.simpleChoices}>
                     {question.choices.map((choice) => (
                       <li key={choice}>{choice}</li>
                     ))}
                   </ol>
                 ) : null}
-                <p className="text-sm text-ink-secondary">
+                <p className={ui.text.secondary}>
                   <b>정답</b> {question.answer}
                 </p>
               </article>
@@ -1505,30 +1503,30 @@ function LegacyAiGenerateView({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-h-[94px] rounded-lg border border-hairline bg-surface p-[18px]">
-      <span className="block text-[13px] text-ink-muted">{label}</span>
-      <strong className="mt-2.5 block text-3xl leading-[1.2]">{value}</strong>
+    <div className={ui.metric}>
+      <span className={ui.text.muted13}>{label}</span>
+      <strong className={ui.metricValue}>{value}</strong>
     </div>
   );
 }
 
 function PanelHeader({ title, icon: Icon }: { title: string; icon: typeof ClipboardList }) {
   return (
-    <div className="mb-3.5 flex items-center justify-between">
-      <div className="flex items-center gap-2">
+    <div className={ui.section.header}>
+      <div className={ui.section.headerContent}>
         <Icon size={18} />
-        <h2 className="m-0 text-lg leading-[1.33]">{title}</h2>
+        <h2 className={ui.section.title}>{title}</h2>
       </div>
     </div>
   );
 }
 
 function Badge({ children }: { children: React.ReactNode }) {
-  return <span className="inline-flex rounded-full bg-canvas-soft px-2 py-1 text-xs font-semibold leading-[1.33] text-ink-secondary">{children}</span>;
+  return <span className={ui.badge}>{children}</span>;
 }
 
 function EmptyLine({ label }: { label: string }) {
-  return <div className="flex min-h-[52px] items-center border-t border-hairline text-sm text-ink-muted">{label}</div>;
+  return <div className={ui.emptyLine}>{label}</div>;
 }
 
 function TextField({
@@ -1541,9 +1539,9 @@ function TextField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-[13px] text-ink-muted">{label}</span>
-      <input className="min-h-[38px] w-full rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]" value={value} onChange={(event) => onChange(event.target.value)} />
+    <label className={ui.field.group}>
+      <span className={ui.field.label}>{label}</span>
+      <input className={ui.field.input} value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
 }
@@ -1560,9 +1558,9 @@ function SelectField({
   options: Array<[string, string]>;
 }) {
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-[13px] text-ink-muted">{label}</span>
-      <select className="min-h-[38px] w-full rounded border border-hairline bg-surface px-2 py-1.5 text-ink outline-none focus:border-primary focus:shadow-[rgba(0,117,222,0.14)_0_0_0_3px]" value={value} onChange={(event) => onChange(event.target.value)}>
+    <label className={ui.field.group}>
+      <span className={ui.field.label}>{label}</span>
+      <select className={ui.field.select} value={value} onChange={(event) => onChange(event.target.value)}>
         {options.map(([optionValue, labelText]) => (
           <option key={optionValue} value={optionValue}>
             {labelText}
