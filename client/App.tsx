@@ -1,5 +1,3 @@
-"use client";
-
 import {
   BadgeCheck,
   BookOpen,
@@ -22,7 +20,6 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
 import { getDefaultCriteria, getCurriculum } from "@/lib/curriculum";
 import { EXAM_TYPES } from "@/lib/types";
 import type { AppState, ExamType, Question, QuestionDraft, QuestionType, WrongNote } from "@/lib/types";
@@ -302,6 +299,7 @@ export default function Home() {
     }
 
     const buffer = await file.arrayBuffer();
+    const XLSX = await import("xlsx");
     const workbook = XLSX.read(buffer);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });

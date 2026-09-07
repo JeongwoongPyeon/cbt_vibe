@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../lib/ui-classes.ts";
 
 @theme {
   --color-primary: #0075de;

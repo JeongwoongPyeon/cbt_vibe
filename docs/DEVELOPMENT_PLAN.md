@@ -18,10 +18,10 @@
 
 ### 로컬 웹앱 구조
 
-초기 구현은 `Next.js 로컬 웹앱 + SQLite` 형태를 권장한다. 브라우저에서 보는 사이트처럼 사용할 수 있으면서도, API 키와 로컬 DB 접근은 서버 측 코드에 둘 수 있어 구조가 단순하고 안전하다.
+현재 구현은 `Vite React SPA + Node.js 로컬 API + SQLite` 형태다. API 키와 로컬 DB 접근은 서버 측 코드에 두고, AI 처리는 Python FastAPI Worker에 위임한다.
 
-- 프론트엔드: Next.js, React, TypeScript
-- 로컬 API: Next.js API Route 또는 Server Action
+- 프론트엔드: Vite, React, TypeScript, TailwindCSS
+- 로컬 API: Node.js + Hono (기존 `/api/*` 요청 형식 유지)
 - 로컬 DB: SQLite
 - 데이터 검증: Zod 같은 런타임 스키마 검증 도구
 - 엑셀 처리: SheetJS 계열 라이브러리

@@ -10,8 +10,12 @@ AI 기반 CBT(Computer Based Test) 풀이 사이트입니다.
 
 ## 현재 구성
 
-이 저장소는 프로젝트 초기 설정 단계입니다.
+Vite 기반 React SPA와 로컬 Node.js API, Python AI Worker로 구성됩니다.
 
+- `client/`: React 화면, TailwindCSS, Noto Sans KR
+- `server/`: Hono 기반 로컬 API와 개발/빌드 실행 서버
+- `lib/`: 문제 검증, SQLite 저장, 공통 타입과 UI 클래스
+- `ai-worker/`: FastAPI 기반 AI 워크플로우
 - `README.md`: 프로젝트 개요와 실행 준비 문서
 - `docs/DEVELOPMENT_PLAN.md`: AI CBT 사이트 개발 계획
 - `docs/DESIGN_SYSTEM.md`: Notion 계열 기반 디자인 시스템 가이드
@@ -58,8 +62,13 @@ AI_PROMPT_VERSION=question-v1
 ```
 
 실제 API 키가 들어간 `.env` 파일은 Git에 커밋하지 않습니다.
+키는 Node 서버와 Python Worker에서만 읽습니다. 브라우저에 공개되는 `VITE_`
+접두사를 API 키에 붙이지 마세요. `PORT`로 웹 포트를, `CBT_DATA_DIR`로 데이터
+폴더를 변경할 수 있습니다. 기존 데이터의 기본 위치는 바뀌지 않습니다.
 
 ## 로컬 실행
+
+Node.js 24 이상이 필요합니다. 아래 명령은 저장소 루트에서 실행합니다.
 
 ```bash
 npm install
@@ -75,7 +84,7 @@ python -m pip install -r ai-worker/requirements.txt
 python -m uvicorn app.main:app --app-dir ai-worker --host 127.0.0.1 --port 8001
 ```
 
-Worker의 `GET /health`가 `status: ok`를 반환하면 Next.js의 AI 생성 화면에서
+Worker의 `GET /health`가 `status: ok`를 반환하면 웹앱의 AI 생성 화면에서
 일반 문제 생성과 AI 화면의 `사진 인식` 모드가 동작합니다. 사진 결과는 정답과
 형식 검토 후 저장하며, 정답이 누락된 항목은 직접 수정할 수 있습니다.
 
@@ -85,7 +94,34 @@ Worker의 `GET /health`가 `status: ok`를 반환하면 Next.js의 AI 생성 화
 powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1
 ```
 
-스크립트는 Python Worker와 Next.js를 별도 PowerShell 창에서 실행합니다. Next.js의
-기본 포트가 사용 중이면 비어 있는 다음 포트를 자동으로 선택합니다.
+또는 `npm run dev:all`로 실행할 수 있습니다. 스크립트는 현재 터미널에서
+Python Worker와 Vite + Node API를 함께 실행하고, `Ctrl+C`로 함께 종료합니다.
+웹 기본 포트는 3000이며 사용 중이면 다음 포트로 이동합니다(최대 20회).
+Worker 기본 포트 8001이 사용 중이면 기존 프로세스를 건드리지 않고 종료합니다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1 -WebPort 3001 -WorkerPort 8002
+```
+
+`-NextPort`는 이전 스크립트와의 호환을 위한 `-WebPort` 별칭으로 남겨 두었습니다.
+웹과 `/api/*`는 같은 주소에서 제공됩니다. 개발 중 React 변경은 Vite HMR로,
+Node API 변경은 tsx watch로 반영됩니다. AI Worker 코드를 수정하면 재시작합니다.
+
+## 빌드와 검증
+
+```bash
+npm test
+npm run build
+npm start
+```
+
+빌드는 타입 검사 후 `dist/client`에 브라우저 파일을, `dist/server`에 Node API를
+생성합니다. `npm start`는 Vite 개발 서버 없이 빌드된 화면과 API를 제공합니다.
+빌드 실행에서도 AI 기능을 사용하려면 Worker를 별도로 켜야 합니다.
+`npm test`는 임시 SQLite와 가짜 Worker로 저장/채점/오답노트/AI 중계를 검사하며,
+실제 API 비용이나 기존 데이터 변경은 발생하지 않습니다.
+
+모든 서버는 `127.0.0.1`에서만 수신하며, 외부 배포나 공개 서비스용 인증은 포함하지 않습니다.
+Vite 개발 서버의 파일 접근에서도 환경 파일, DB, 서버 코드와 Worker 폴더를 차단합니다.
 
 앱 데이터는 `local-data/cbt.sqlite`에 저장되며 Git에는 커밋되지 않습니다.

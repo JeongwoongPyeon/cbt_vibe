@@ -1,8 +1,5 @@
 import { normalizeExamType } from "@/lib/validation";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 export async function POST(request: Request) {
   try {
     const incoming = await request.formData();
@@ -47,7 +44,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error: message.includes("fetch failed") || message.includes("ECONNREFUSED")
-          ? "AI Worker가 실행 중인지 확인해 주세요. (127.0.0.1:8001)"
+          ? "AI Worker가 실행 중인지와 AI_WORKER_URL 설정을 확인해 주세요."
           : message,
       },
       { status: 400 },

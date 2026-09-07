@@ -3,7 +3,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 400;
-  src: url("~@fontsource/noto-sans-kr/files/noto-sans-kr-korean-400-normal.woff") format("woff");
+  src: url("@fontsource/noto-sans-kr/files/noto-sans-kr-korean-400-normal.woff") format("woff");
 }
 
 @font-face {
@@ -11,7 +11,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 500;
-  src: url("~@fontsource/noto-sans-kr/files/noto-sans-kr-korean-500-normal.woff") format("woff");
+  src: url("@fontsource/noto-sans-kr/files/noto-sans-kr-korean-500-normal.woff") format("woff");
 }
 
 @font-face {
@@ -19,7 +19,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 600;
-  src: url("~@fontsource/noto-sans-kr/files/noto-sans-kr-korean-600-normal.woff") format("woff");
+  src: url("@fontsource/noto-sans-kr/files/noto-sans-kr-korean-600-normal.woff") format("woff");
 }
 
 @font-face {
@@ -27,5 +27,5 @@
   font-style: normal;
   font-display: swap;
   font-weight: 700;
-  src: url("~@fontsource/noto-sans-kr/files/noto-sans-kr-korean-700-normal.woff") format("woff");
+  src: url("@fontsource/noto-sans-kr/files/noto-sans-kr-korean-700-normal.woff") format("woff");
 }

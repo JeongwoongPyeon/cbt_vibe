@@ -15,7 +15,7 @@ import type {
 } from "./types";
 import { normalizeExamType, normalizeForCompare, parseJsonList } from "./validation";
 
-const dbDir = path.join(process.cwd(), "local-data");
+const dbDir = path.resolve(process.env.CBT_DATA_DIR || "local-data");
 const dbPath = path.join(dbDir, "cbt.sqlite");
 
 type QuestionRow = {
@@ -71,6 +71,11 @@ type WrongNoteRow = {
 const globalForDb = globalThis as typeof globalThis & {
   cbtDb?: DatabaseSync;
 };
+
+export function closeDatabase(): void {
+  globalForDb.cbtDb?.close();
+  globalForDb.cbtDb = undefined;
+}
 
 function now(): string {
   return new Date().toISOString();
