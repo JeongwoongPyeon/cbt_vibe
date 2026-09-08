@@ -5,6 +5,23 @@ export function cn(...values: ClassValue[]): string {
 }
 
 export const ui = {
+  filters: {
+    trigger: "flex min-h-10 w-full items-center justify-between gap-2 rounded-lg border border-hairline bg-surface px-3 py-2 text-left text-sm hover:border-primary focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50",
+    label: "min-w-0 flex-1 break-words",
+    popup: "z-50 w-[min(360px,calc(100vw_-_32px))] overflow-hidden rounded-lg border border-hairline bg-surface shadow-lg",
+    input: "w-full border-b border-hairline bg-transparent p-3 text-sm outline-none",
+    list: "max-h-72 overflow-y-auto p-1",
+    item: "flex cursor-pointer items-center justify-between gap-2 rounded px-3 py-2 text-sm data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary",
+    empty: "p-4 text-sm text-ink-muted",
+    segments: "flex flex-wrap gap-1 rounded-lg border border-hairline p-1",
+    segment: "min-h-8 rounded px-3 py-1 text-sm text-ink-muted hover:bg-canvas-soft disabled:opacity-50",
+    active: "bg-primary/10 font-semibold text-primary",
+    chartGrid: "col-span-full grid min-w-0 grid-cols-2 gap-6 border-y border-hairline py-5 max-[800px]:grid-cols-1",
+    chart: "relative h-64 min-w-0",
+    section: "flex min-w-0 flex-col gap-3",
+    full: "col-span-full min-w-0",
+    table: "w-full text-left text-sm [&_th]:p-2 [&_td]:p-2 [&_tr]:border-b [&_tr]:border-hairline",
+  },
   study: {
     workspace: "flex min-w-0 flex-col gap-4",
     toolbar: "flex flex-wrap items-end gap-3 border-b border-hairline pb-4",

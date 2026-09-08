@@ -15,6 +15,49 @@ import {
   type ExamSession,
 } from "../../lib/exam";
 import type { Attempt, Question } from "../../lib/types";
+import { learningMetrics } from "../../lib/analytics";
+
+test("analytics uses Korean calendar boundaries and excludes unrelated, invalid and future attempts", () => {
+  const metrics = learningMetrics(
+    [
+      attempt("1", { createdAt: "2026-09-01T15:00:00Z" }),
+      attempt("2", { createdAt: "2026-09-01T14:59:59Z" }),
+      attempt("3", { createdAt: "2026-09-08T01:00:00Z", isCorrect: false }),
+      attempt("4", { createdAt: "2026-09-08T01:00:00Z", examType: "ncs" }),
+      attempt("5", {
+        createdAt: "2026-09-08T01:00:00Z",
+        questionId: "missing",
+      }),
+      attempt("6", { createdAt: "invalid" }),
+      attempt("7", { createdAt: "2026-09-08T12:00:00Z" }),
+    ],
+    [question("a")],
+    7,
+    new Date("2026-09-08T03:00:00Z"),
+  );
+  assert.equal(metrics.total, 2);
+  assert.equal(metrics.accuracy, 50);
+  assert.equal(metrics.incorrect, 1);
+  assert.equal(metrics.daily[0].date, "2026-09-02");
+  assert.equal(metrics.daily[0].accuracy, 100);
+  assert.equal(metrics.daily[1].accuracy, null);
+  assert.equal(metrics.daily[6].accuracy, 0);
+});
+
+test("analytics keeps identically named units in different parts separate and handles empty periods", () => {
+  const metrics = learningMetrics(
+    [attempt("1"), attempt("2", { questionId: "b", isCorrect: false })],
+    [question("a"), question("b", { part: "Other" })],
+    30,
+    new Date("2026-01-02"),
+  );
+  assert.equal(metrics.units.length, 2);
+  assert.equal(metrics.daily.length, 30);
+  const empty = learningMetrics([], [], 7);
+  assert.equal(empty.accuracy, null);
+  assert.equal(empty.total, 0);
+  assert.ok(empty.daily.every((day) => day.accuracy === null));
+});
 
 function question(id: string, overrides: Partial<Question> = {}): Question {
   return {

@@ -19,7 +19,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { PracticeWorkspace } from "./components/PracticeWorkspace";
 import { QuestionFilterBar, QuestionProgress } from "./components/QuestionOverview";
 import { attemptHistory, emptyFilters, filterQuestions, type QuestionFilters } from "@/lib/study";
@@ -40,6 +40,8 @@ import {
   normalizeQuestionType,
   validateQuestionDraft,
 } from "@/lib/validation";
+
+const StudyAnalytics = lazy(() => import('./components/StudyAnalytics'));
 
 type ViewKey = "dashboard" | "practice" | "wrong" | "bank" | "import" | "ai";
 
@@ -661,6 +663,7 @@ function DashboardView({ state, onStart }: { state: AppState; onStart: () => voi
         <Metric label="오답" value={`${state.stats.openWrongNotes}`} />
       </section>
 
+      <Suspense fallback={<p role="status">통계 불러오는 중…</p>}><StudyAnalytics state={state} /></Suspense>
       <section className={ui.panel.surface}>
         <PanelHeader title="최근 풀이" icon={History} />
         <div className={ui.layout.stack}>
