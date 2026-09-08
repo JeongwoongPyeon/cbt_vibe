@@ -7,6 +7,7 @@ import { POST as attempts } from "./routes/attempts";
 import { PUT as wrongNotes } from "./routes/wrong-notes";
 import { POST as generate } from "./routes/generate";
 import { POST as importImages } from "./routes/import-images";
+import { POST as exams } from "./routes/exams";
 
 export function createApp(production = false) {
   const app = new Hono();
@@ -35,6 +36,7 @@ export function createApp(production = false) {
   app.get("/api/state", (c) => state(c.req.raw));
   app.post("/api/questions", (c) => questions(c.req.raw));
   app.post("/api/attempts", (c) => attempts(c.req.raw));
+  app.post("/api/exams", (c) => exams(c.req.raw));
   app.put("/api/wrong-notes", (c) => wrongNotes(c.req.raw));
   app.post("/api/ai/generate", (c) => generate(c.req.raw));
   app.post("/api/ai/import-images", (c) => importImages(c.req.raw));

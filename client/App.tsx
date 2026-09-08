@@ -19,16 +19,17 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { PracticeWorkspace } from "./components/PracticeWorkspace";
+import { QuestionFilterBar, QuestionProgress } from "./components/QuestionOverview";
+import { attemptHistory, emptyFilters, filterQuestions, type QuestionFilters } from "@/lib/study";
+import { parseExamSession } from "@/lib/exam";
 import { getDefaultCriteria, getCurriculum } from "@/lib/curriculum";
 import { EXAM_TYPES } from "@/lib/types";
-import type { AppState, ExamType, Question, QuestionDraft, QuestionType, WrongNote } from "@/lib/types";
+import type { AppState, Attempt, ExamType, Question, QuestionDraft, QuestionType, WrongNote } from "@/lib/types";
 import {
-  answerChoice,
-  feedbackBanner,
   navItem,
   providerStatus,
-  questionListItem,
   tabButton,
   ui,
   validationStatus,
@@ -115,13 +116,19 @@ const navItems: Array<{
 ];
 
 export default function Home() {
+  const [resumeExam] = useState(() => {
+    try {
+      return EXAM_TYPES.map(({ id }) => parseExamSession(localStorage.getItem(`cbt.exam.v1.${id}`), id))
+        .filter((session) => session && !session.result).sort((a, b) => b!.startedAt - a!.startedAt)[0];
+    } catch { return null; }
+  });
   const [state, setState] = useState<AppState | null>(null);
-  const [examType, setExamType] = useState<ExamType>("ncs");
-  const [view, setView] = useState<ViewKey>("dashboard");
+  const [examType, setExamType] = useState<ExamType>(resumeExam?.examType || "ncs");
+  const [view, setView] = useState<ViewKey>(resumeExam ? "practice" : "dashboard");
   const [activeQuestionId, setActiveQuestionId] = useState("");
-  const [selectedAnswer, setSelectedAnswer] = useState("");
-  const [answered, setAnswered] = useState<null | { isCorrect: boolean; answer: string }>(null);
-  const [startedAt, setStartedAt] = useState(Date.now());
+  const [filters, setFilters] = useState<QuestionFilters>(emptyFilters);
+  const [examLocked, setExamLocked] = useState(!!resumeExam);
+  const loadSequence = useRef(0);
   const [manualForm, setManualForm] = useState<ManualForm>(emptyManualForm);
   const [importPreview, setImportPreview] = useState<ImportPreview[]>([]);
   const [generatedQuestions, setGeneratedQuestions] = useState<QuestionDraft[]>([]);
@@ -146,55 +153,17 @@ export default function Home() {
     void loadState(examType);
   }, [examType]);
 
-  useEffect(() => {
-    if (!state || activeQuestionId) {
-      return;
-    }
-
-    setActiveQuestionId(state.questions[0]?.id || "");
-  }, [activeQuestionId, state]);
-
-  const activeQuestion = useMemo(
-    () => state?.questions.find((question) => question.id === activeQuestionId) || null,
-    [activeQuestionId, state],
-  );
-
-  const filteredQuestions = useMemo(() => {
-    if (!state) {
-      return [];
-    }
-
-    const term = searchTerm.trim().toLowerCase();
-
-    if (!term) {
-      return state.questions;
-    }
-
-    return state.questions.filter((question) =>
-      [
-        question.stem,
-        question.category,
-        question.part || "",
-        question.unit || "",
-        question.topic || "",
-        question.difficulty,
-        question.sourceType,
-        ...question.tags,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(term),
-    );
-  }, [searchTerm, state]);
+  const filteredQuestions = useMemo(() => state ? filterQuestions(state.questions, state.attempts, filters, searchTerm) : [], [state, filters, searchTerm]);
 
   async function loadState(nextExamType: ExamType = examType) {
+    const sequence = ++loadSequence.current;
     const response = await fetch(`/api/state?examType=${encodeURIComponent(nextExamType)}`, { cache: "no-store" });
     const nextState = (await response.json()) as AppState;
+    if (sequence !== loadSequence.current) return;
     setState(nextState);
     setExamType(nextState.examType);
     setActiveQuestionId("");
-    setSelectedAnswer("");
-    setAnswered(null);
+    setFilters(emptyFilters);
     setManualForm((current) => ({ ...current, examType: nextState.examType }));
     setAiForm((current) => ({
       ...current,
@@ -206,45 +175,13 @@ export default function Home() {
 
   function chooseQuestion(questionId: string) {
     setActiveQuestionId(questionId);
-    setSelectedAnswer("");
-    setAnswered(null);
-    setStartedAt(Date.now());
   }
 
-  async function submitAnswer() {
-    if (!activeQuestion || !selectedAnswer) {
-      return;
-    }
-
-    setBusy(true);
-    setStatusMessage("");
-
-    try {
-      const response = await fetch("/api/attempts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questionId: activeQuestion.id,
-          examType: activeQuestion.examType,
-          selectedAnswer,
-          elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
-          mode: view === "wrong" ? "review" : "practice",
-        }),
-      });
-      const payload = await response.json();
-
-      if (!response.ok) {
-        throw new Error(payload.error || "채점에 실패했습니다.");
-      }
-
-      setState(payload.state);
-      setAnswered({ isCorrect: payload.attempt.isCorrect, answer: activeQuestion.answer });
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "채점에 실패했습니다.");
-    } finally {
-      setBusy(false);
-    }
+  function changeFilters(next: QuestionFilters) {
+    setFilters(next);
+    setActiveQuestionId("");
   }
+
 
   async function saveManualQuestion() {
     const validation = validateQuestionDraft({
@@ -519,6 +456,7 @@ export default function Home() {
               <button
                 key={item.key}
                 className={navItem(view === item.key)}
+                disabled={examLocked && item.key !== "practice"}
                 onClick={() => setView(item.key)}
                 type="button"
               >
@@ -558,6 +496,7 @@ export default function Home() {
               <span className={ui.accessibility.srOnly}>시험 종류</span>
               <select
                 aria-label="시험 종류"
+                disabled={examLocked}
                 className={ui.field.examSelect}
                 value={examType}
                 onChange={(event) => {
@@ -586,12 +525,13 @@ export default function Home() {
               <Search size={16} />
               <input
                 value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
+                disabled={examLocked}
+                onChange={(event) => { setSearchTerm(event.target.value); setActiveQuestionId(""); }}
                 className={ui.field.searchInput}
                 placeholder="검색"
               />
             </label>
-            <button className={ui.button.icon} onClick={() => void loadState()} title="새로고침" type="button">
+            <button className={ui.button.icon} disabled={examLocked} onClick={() => void loadState()} title="새로고침" type="button">
               <RefreshCw size={17} />
             </button>
             <button className={ui.button.icon} title="설정" type="button">
@@ -614,16 +554,20 @@ export default function Home() {
         ) : null}
 
         {view === "practice" ? (
-          <PracticeView
-            activeQuestion={activeQuestion}
-            answered={answered}
-            busy={busy}
+          <PracticeWorkspace
+            key={state.examType}
+            examType={state.examType}
+            questions={state.questions}
+            attempts={state.attempts}
+            activeQuestionId={activeQuestionId}
+            filters={filters}
+            onFilterChange={changeFilters}
+            onClearSearch={() => setSearchTerm("")}
+            onLockChange={setExamLocked}
+            onStateChange={(next) => setState((current) => current?.examType === next.examType ? next : current)}
             filteredQuestions={filteredQuestions}
             onChoose={chooseQuestion}
             onGenerateSimilar={setSimilarGeneration}
-            onSubmit={() => void submitAnswer()}
-            selectedAnswer={selectedAnswer}
-            setSelectedAnswer={setSelectedAnswer}
           />
         ) : null}
 
@@ -632,6 +576,8 @@ export default function Home() {
             questions={state.questions}
             wrongNotes={state.wrongNotes}
             onChoose={(questionId) => {
+              changeFilters(emptyFilters);
+              setSearchTerm("");
               chooseQuestion(questionId);
               setView("practice");
             }}
@@ -643,6 +589,10 @@ export default function Home() {
         {view === "bank" ? (
           <QuestionBankView
             busy={busy}
+            questions={state.questions}
+            attempts={state.attempts}
+            filters={filters}
+            onFilterChange={changeFilters}
             filteredQuestions={filteredQuestions}
             form={manualForm}
             onChoose={(questionId) => {
@@ -751,113 +701,6 @@ function DashboardView({ state, onStart }: { state: AppState; onStart: () => voi
   );
 }
 
-function PracticeView({
-  activeQuestion,
-  answered,
-  busy,
-  filteredQuestions,
-  onChoose,
-  onGenerateSimilar,
-  onSubmit,
-  selectedAnswer,
-  setSelectedAnswer,
-}: {
-  activeQuestion: Question | null;
-  answered: null | { isCorrect: boolean; answer: string };
-  busy: boolean;
-  filteredQuestions: Question[];
-  onChoose: (questionId: string) => void;
-  onGenerateSimilar: (question: Question) => void;
-  onSubmit: () => void;
-  selectedAnswer: string;
-  setSelectedAnswer: (answer: string) => void;
-}) {
-  return (
-    <div className={ui.layout.panelGrid}>
-      <section className={ui.panel.practice}>
-        {activeQuestion ? (
-          <>
-            <div className={ui.layout.badgeGroup}>
-              <Badge>{getQuestionTypeLabel(activeQuestion.type)}</Badge>
-              <Badge>{activeQuestion.category}</Badge>
-              <Badge>{activeQuestion.difficulty}</Badge>
-            </div>
-            <h2 className={ui.section.questionTitle}>{activeQuestion.stem}</h2>
-
-            {activeQuestion.type === "short_answer" ? (
-              <label className={ui.list.answerLabel}>
-                <span className={ui.field.label}>답안</span>
-                <input
-                  className={ui.field.answer}
-                  value={selectedAnswer}
-                  onChange={(event) => setSelectedAnswer(event.target.value)}
-                  placeholder="정답 입력"
-                />
-              </label>
-            ) : (
-              <div className={ui.list.answerChoices}>
-                {activeQuestion.choices.map((choice, index) => (
-                  <button
-                    className={answerChoice(selectedAnswer === choice)}
-                    key={choice}
-                    onClick={() => setSelectedAnswer(choice)}
-                    type="button"
-                  >
-                    <span className={ui.answerChoice.marker}>{index + 1}</span>
-                    <b className={ui.text.question}>{choice}</b>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {answered ? (
-              <div className={feedbackBanner(answered.isCorrect)}>
-                <strong className={ui.text.block}>{answered.isCorrect ? "정답" : "오답"}</strong>
-                <span className={ui.text.answer}>정답: {answered.answer}</span>
-                {activeQuestion.explanation ? <p className={ui.text.body15}>{activeQuestion.explanation}</p> : null}
-              </div>
-            ) : null}
-
-            <div className={ui.layout.actionRow}>
-              <button
-                className={ui.button.primary}
-                disabled={!selectedAnswer || busy}
-                onClick={onSubmit}
-                type="button"
-              >
-                {busy ? <Loader2 className={ui.icon.spin} size={18} /> : <Check size={18} />}
-                채점
-              </button>
-              <button className={ui.button.secondary} onClick={() => onGenerateSimilar(activeQuestion)} type="button">
-                <Sparkles size={17} />
-                유사 문제
-              </button>
-            </div>
-          </>
-        ) : (
-          <EmptyLine label="문제 없음" />
-        )}
-      </section>
-
-      <aside className={ui.panel.practiceList}>
-        <PanelHeader title="문제 목록" icon={LibraryBig} />
-        <div className={ui.list.dividerStack}>
-          {filteredQuestions.map((question) => (
-            <button
-              className={questionListItem(question.id === activeQuestion?.id)}
-              key={question.id}
-              onClick={() => onChoose(question.id)}
-              type="button"
-            >
-              <span className={ui.list.questionMeta}>{question.category}</span>
-              <strong className={ui.list.questionTitle}>{question.stem}</strong>
-            </button>
-          ))}
-        </div>
-      </aside>
-    </div>
-  );
-}
 
 function WrongNotesView({
   questions,
@@ -923,6 +766,10 @@ function WrongNotesView({
 
 function QuestionBankView({
   busy,
+  questions,
+  attempts,
+  filters,
+  onFilterChange,
   filteredQuestions,
   form,
   onChoose,
@@ -930,6 +777,10 @@ function QuestionBankView({
   setForm,
 }: {
   busy: boolean;
+  questions: Question[];
+  attempts: Attempt[];
+  filters: QuestionFilters;
+  onFilterChange: (filters: QuestionFilters) => void;
   filteredQuestions: Question[];
   form: ManualForm;
   onChoose: (questionId: string) => void;
@@ -937,6 +788,7 @@ function QuestionBankView({
   setForm: (form: ManualForm) => void;
 }) {
   const choiceCount = getChoiceCount(form.type);
+  const history = useMemo(() => attemptHistory(attempts), [attempts]);
 
   return (
     <div className={ui.layout.panelGrid}>
@@ -1037,11 +889,14 @@ function QuestionBankView({
 
       <section className={ui.panel.surface}>
         <PanelHeader title="문제 은행" icon={LibraryBig} />
+        <QuestionFilterBar questions={questions} filters={filters} onChange={onFilterChange} />
+        <p className={ui.text.muted13}>{filteredQuestions.length}문항 · 최근 5회 최신순</p>
         <div className={ui.list.resultPanel}>
           {filteredQuestions.map((question) => (
             <button className={ui.button.listItem} key={question.id} onClick={() => onChoose(question.id)} type="button">
-              <span className={ui.list.questionMeta}>{`${getQuestionTypeLabel(question.type)} · ${question.category}`}</span>
+              <span className={ui.list.questionMeta}>{[getQuestionTypeLabel(question.type), question.part, question.unit, question.category].filter(Boolean).join(" · ")}</span>
               <strong className={ui.list.questionTitle}>{question.stem}</strong>
+              <QuestionProgress attempts={history.get(question.id)} />
             </button>
           ))}
         </div>

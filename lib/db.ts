@@ -14,6 +14,7 @@ import type {
   WrongNote,
 } from "./types";
 import { normalizeExamType, normalizeForCompare, parseJsonList } from "./validation";
+import type { ExamSubmission } from "./exam";
 
 const dbDir = path.resolve(process.env.CBT_DATA_DIR || "local-data");
 const dbPath = path.join(dbDir, "cbt.sqlite");
@@ -100,6 +101,12 @@ function getDb(): DatabaseSync {
 
 function initializeDb(db: DatabaseSync): void {
   db.exec(`
+    CREATE TABLE IF NOT EXISTS exam_submissions (
+      id TEXT PRIMARY KEY,
+      payload TEXT NOT NULL,
+      results TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS questions (
       id TEXT PRIMARY KEY,
       exam_type TEXT NOT NULL DEFAULT 'computer_general',
@@ -385,7 +392,7 @@ export function listAttempts(examType: ExamType, db = getDb()): Attempt[] {
       FROM attempts
       INNER JOIN questions ON questions.id = attempts.question_id
       WHERE questions.exam_type = ?
-      ORDER BY attempts.created_at DESC
+      ORDER BY attempts.created_at DESC, attempts.rowid DESC
     `)
     .all(examType) as AttemptRow[];
 
@@ -468,6 +475,36 @@ export function recordAttempt(input: {
   );
 }
 
+export function submitExam(input: ExamSubmission): Attempt[] {
+  const db = getDb();
+  const payload = JSON.stringify(input.responses);
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const existing = db.prepare("SELECT payload, results FROM exam_submissions WHERE id = ?").get(input.submissionId) as { payload: string; results: string } | undefined;
+    if (existing) {
+      if (existing.payload !== payload) throw new Error("이미 제출한 시험의 답안을 변경할 수 없습니다.");
+      db.exec("COMMIT");
+      return JSON.parse(existing.results) as Attempt[];
+    }
+    const questions = input.responses.map((response) => getQuestionById(response.questionId, db));
+    if (questions.some((question) => !question)) throw new Error("문제를 찾을 수 없습니다.");
+    if (new Set(input.responses.map((response) => response.questionId)).size !== questions.length) {
+      throw new Error("중복 문항은 제출할 수 없습니다.");
+    }
+    if (new Set(questions.map((question) => question!.examType)).size !== 1) {
+      throw new Error("같은 시험 종류의 문항만 제출할 수 있습니다.");
+    }
+    const attempts = input.responses.map((response) => recordAttempt({ ...response, mode: "exam" }));
+    db.prepare("INSERT INTO exam_submissions (id, payload, results, created_at) VALUES (?, ?, ?, ?)")
+      .run(input.submissionId, payload, JSON.stringify(attempts), now());
+    db.exec("COMMIT");
+    return attempts;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
 export function updateWrongNote(input: {
   questionId: string;
   reasonTags: string[];
@@ -520,7 +557,7 @@ export function getAppState(examType: ExamType = "ncs"): AppState {
       FROM attempts
       INNER JOIN questions ON questions.id = attempts.question_id
       WHERE questions.exam_type = ?
-      ORDER BY attempts.created_at DESC
+      ORDER BY attempts.created_at DESC, attempts.rowid DESC
       LIMIT 8
     `)
     .all(examType) as AttemptRow[];
