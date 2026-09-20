@@ -5,6 +5,22 @@ export function cn(...values: ClassValue[]): string {
 }
 
 export const ui = {
+  subjects: {
+    full: "col-span-full",
+    section: "flex min-w-0 flex-col gap-4 border-b border-hairline py-5",
+    grid: "grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-3",
+    card: "flex min-w-0 flex-col gap-3 rounded-lg border border-hairline bg-surface p-4",
+    choice: "flex min-h-20 min-w-0 cursor-pointer items-center gap-3 rounded-lg border border-hairline bg-surface p-3 text-sm focus-within:outline-2 focus-within:outline-primary hover:border-primary",
+    selected: "border-primary bg-primary/5 text-primary",
+    disabled: "pointer-events-none opacity-50",
+    copy: "flex min-w-0 flex-1 flex-col gap-1 break-words",
+    radio: "sr-only",
+    trigger: "flex min-h-10 items-center gap-2 rounded-lg border border-hairline bg-surface px-3 py-2 text-sm font-semibold disabled:opacity-50",
+    popover: "z-50 w-[min(360px,calc(100vw_-_32px))] rounded-lg border border-hairline bg-surface p-3 shadow-lg",
+    list: "flex min-w-0 flex-col gap-2",
+    danger: "inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-danger/30 px-3 py-2 text-sm text-danger hover:bg-danger-soft disabled:opacity-40",
+    dialog: "m-auto w-[min(480px,calc(100%_-_32px))] rounded-lg border border-hairline bg-surface p-6 text-ink shadow-xl backdrop:bg-black/40",
+  },
   filters: {
     trigger: "flex min-h-10 w-full items-center justify-between gap-2 rounded-lg border border-hairline bg-surface px-3 py-2 text-left text-sm hover:border-primary focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50",
     label: "min-w-0 flex-1 break-words",

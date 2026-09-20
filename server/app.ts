@@ -8,6 +8,7 @@ import { PUT as wrongNotes } from "./routes/wrong-notes";
 import { POST as generate } from "./routes/generate";
 import { POST as importImages } from "./routes/import-images";
 import { POST as exams } from "./routes/exams";
+import { mutateSubject } from "./routes/subjects";
 
 export function createApp(production = false) {
   const app = new Hono();
@@ -34,6 +35,8 @@ export function createApp(production = false) {
   }));
   app.get("/api/health", (c) => c.json({ status: "ok" }));
   app.get("/api/state", (c) => state(c.req.raw));
+  app.delete("/api/subjects", (c) => mutateSubject(c.req.raw));
+  app.post("/api/subjects", (c) => mutateSubject(c.req.raw));
   app.post("/api/questions", (c) => questions(c.req.raw));
   app.post("/api/attempts", (c) => attempts(c.req.raw));
   app.post("/api/exams", (c) => exams(c.req.raw));

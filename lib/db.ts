@@ -12,7 +12,10 @@ import type {
   QuestionDraft,
   RecentAttempt,
   WrongNote,
+  SubjectSummary,
 } from "./types";
+import { EXAM_TYPES } from "./types";
+import { AI_PROVIDERS, resolveProvider } from "./providers";
 import { normalizeExamType, normalizeForCompare, parseJsonList } from "./validation";
 import type { ExamSubmission } from "./exam";
 
@@ -101,6 +104,10 @@ function getDb(): DatabaseSync {
 
 function initializeDb(db: DatabaseSync): void {
   db.exec(`
+    CREATE TABLE IF NOT EXISTS subjects (
+      id TEXT PRIMARY KEY,
+      active INTEGER NOT NULL DEFAULT 1
+    );
     CREATE TABLE IF NOT EXISTS exam_submissions (
       id TEXT PRIMARY KEY,
       payload TEXT NOT NULL,
@@ -179,10 +186,13 @@ function initializeDb(db: DatabaseSync): void {
     }
   }
 
-  seedQuestions(db);
+  const newSubjects = EXAM_TYPES.filter(({ id }) =>
+    db.prepare("INSERT OR IGNORE INTO subjects (id) VALUES (?)").run(id).changes > 0,
+  ).map(({ id }) => id);
+  seedQuestions(db, newSubjects);
 }
 
-function seedQuestions(db: DatabaseSync): void {
+function seedQuestions(db: DatabaseSync, newSubjects: ExamType[]): void {
   const seeds: QuestionDraft[] = [
     {
       examType: "computer_general",
@@ -257,6 +267,7 @@ function seedQuestions(db: DatabaseSync): void {
   ];
 
   for (const seed of seeds) {
+    if (!newSubjects.includes(seed.examType)) continue;
     const exists = db
       .prepare("SELECT 1 FROM questions WHERE exam_type = ? LIMIT 1")
       .get(seed.examType);
@@ -330,6 +341,7 @@ function wrongNoteFromRow(row: WrongNoteRow): WrongNote {
 }
 
 export function insertQuestion(question: QuestionDraft, db = getDb()): Question {
+  assertSubjectActive(question.examType, db);
   const createdAt = now();
   const id = createId("q");
 
@@ -544,6 +556,10 @@ export function updateWrongNote(input: {
 
 export function getAppState(examType: ExamType = "ncs"): AppState {
   const db = getDb();
+  const subjects = listSubjects(db);
+  if (!subjects.some(subject => subject.id === examType && subject.active)) {
+    examType = subjects.find(subject => subject.active)?.id || "ncs";
+  }
   const questions = listQuestions(examType, db);
   const attempts = listAttempts(examType, db);
   const wrongNotes = listWrongNotes(examType, db);
@@ -563,6 +579,7 @@ export function getAppState(examType: ExamType = "ncs"): AppState {
     .all(examType) as AttemptRow[];
 
   return {
+    subjects,
     examType,
     questions,
     attempts,
@@ -612,14 +629,60 @@ function buildStats(
 }
 
 function getEnvStatus(): EnvStatus {
-  return {
-    openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
-    geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
-    openaiModel: process.env.OPENAI_MODEL || "gpt-4.1-mini",
-    geminiModel: process.env.GEMINI_MODEL || "gemini-2.0-flash",
-    defaultProvider:
-      process.env.AI_DEFAULT_PROVIDER === "gemini" ? "gemini" : "openai",
+  const configured = (key: string) => {
+    const value = process.env[key]?.trim();
+    return Boolean(value && !value.startsWith("your_") && value !== "changeme");
   };
+  return {
+    openaiConfigured: configured("OPENAI_API_KEY"),
+    geminiConfigured: configured("GEMINI_API_KEY"),
+    anthropicConfigured: configured("ANTHROPIC_API_KEY"),
+    openaiModel: process.env.OPENAI_MODEL || AI_PROVIDERS[0].model,
+    geminiModel: process.env.GEMINI_MODEL || AI_PROVIDERS[1].model,
+    anthropicModel: process.env.ANTHROPIC_MODEL || AI_PROVIDERS[2].model,
+    defaultProvider: resolveProvider(process.env.AI_DEFAULT_PROVIDER),
+  };
+}
+
+export function listSubjects(db = getDb()): SubjectSummary[] {
+  return EXAM_TYPES.map(({ id, label }) => ({
+    id, label,
+    active: Boolean((db.prepare("SELECT active FROM subjects WHERE id = ?").get(id) as { active: number }).active),
+    questions: Number((db.prepare("SELECT COUNT(*) AS n FROM questions WHERE exam_type = ?").get(id) as { n: number }).n),
+    attempts: Number((db.prepare("SELECT COUNT(*) AS n FROM attempts a JOIN questions q ON q.id = a.question_id WHERE q.exam_type = ?").get(id) as { n: number }).n),
+    wrongNotes: Number((db.prepare("SELECT COUNT(*) AS n FROM wrong_notes w JOIN questions q ON q.id = w.question_id WHERE q.exam_type = ?").get(id) as { n: number }).n),
+  }));
+}
+
+export function assertSubjectActive(id: ExamType, db = getDb()): void {
+  if (!(db.prepare("SELECT active FROM subjects WHERE id = ?").get(id) as { active: number } | undefined)?.active) {
+    throw new Error("삭제된 과목입니다. 과목 관리에서 다시 추가해 주세요.");
+  }
+}
+
+export function restoreSubject(id: ExamType): void {
+  getDb().prepare("UPDATE subjects SET active = 1 WHERE id = ?").run(id);
+}
+
+export function deleteSubject(id: ExamType, expected: Pick<SubjectSummary, "questions" | "attempts" | "wrongNotes">): void {
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const subject = listSubjects(db).find(item => item.id === id)!;
+    if (!subject.active) throw new Error("이미 삭제된 과목입니다.");
+    if (subject.questions !== expected.questions || subject.attempts !== expected.attempts || subject.wrongNotes !== expected.wrongNotes) {
+      throw new Error("과목 데이터가 변경되었습니다. 새로고침 후 삭제 범위를 다시 확인해 주세요.");
+    }
+    db.prepare("DELETE FROM exam_submissions WHERE EXISTS (SELECT 1 FROM json_each(exam_submissions.results) WHERE json_extract(value, '$.examType') = ?)").run(id);
+    db.prepare("DELETE FROM wrong_notes WHERE question_id IN (SELECT id FROM questions WHERE exam_type = ?)").run(id);
+    db.prepare("DELETE FROM attempts WHERE question_id IN (SELECT id FROM questions WHERE exam_type = ?)").run(id);
+    db.prepare("DELETE FROM questions WHERE exam_type = ?").run(id);
+    db.prepare("UPDATE subjects SET active = 0 WHERE id = ?").run(id);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 function evaluateAnswer(question: Question, selectedAnswer: string): boolean {

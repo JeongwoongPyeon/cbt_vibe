@@ -1,9 +1,11 @@
-import { getQuestionById } from "@/lib/db";
+import { assertSubjectActive, getQuestionById } from "@/lib/db";
+import { resolveProvider } from "@/lib/providers";
 import { normalizeExamType, normalizeQuestionType } from "@/lib/validation";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    assertSubjectActive(normalizeExamType(body.examType));
     const baseQuestion =
       typeof body.baseQuestionId === "string" && body.baseQuestionId
         ? getQuestionById(body.baseQuestionId)
@@ -14,7 +16,7 @@ export async function POST(request: Request) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        provider: body.provider === "gemini" ? "gemini" : "openai",
+        provider: resolveProvider(body.provider, process.env.AI_DEFAULT_PROVIDER || "openai"),
         examType: normalizeExamType(body.examType),
         category: String(body.category || ""),
         part: String(body.part || ""),

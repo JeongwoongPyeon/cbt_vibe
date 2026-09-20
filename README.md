@@ -5,7 +5,7 @@ AI 기반 CBT(Computer Based Test) 풀이 사이트입니다.
 ## 목표
 
 - 사용자가 CBT 문제를 풀고 즉시 채점 결과를 확인할 수 있습니다.
-- GPT와 Gemini API를 활용해 문제 해설, 오답 분석, 학습 힌트를 제공합니다.
+- OpenAI, Google Gemini, Anthropic Claude API로 문제 생성과 사진 인식을 지원합니다.
 - 문제 풀이 기록을 바탕으로 취약 유형을 정리하고 복습 흐름을 지원합니다.
 
 ## 현재 구성
@@ -28,7 +28,7 @@ Vite 기반 React SPA와 로컬 Node.js API, Python AI Worker로 구성됩니다
 - 4지선다형, 5지선다형, 단답형 풀이
 - 수동 문제 등록
 - 엑셀 파일 문제 가져오기
-- GPT/Gemini 기반 문제 생성 API 연결
+- OpenAI/Gemini/Claude 기반 문제 생성 API 연결
 - Python FastAPI AI Worker 기반 일반 문제 생성 워크플로우
 - 문제집 사진 인식 및 CBT 문제 미리보기 워크플로우
 - NCS, 컴퓨터일반, 정보보호론별 문제/풀이/오답노트 분리
@@ -37,7 +37,7 @@ Vite 기반 React SPA와 로컬 Node.js API, Python AI Worker로 구성됩니다
 
 상단 시험 선택기에서 시험 종류를 바꾸면 해당 시험의 문제, 풀이 기록, 정답률,
 오답노트만 표시됩니다. 기존 로컬 SQLite 데이터는 마이그레이션 시 컴퓨터일반으로
-분류되고, NCS와 정보보호론 샘플 데이터가 자동으로 보충됩니다.
+분류됩니다. 샘플 문제는 과목 관리 정보가 최초 생성될 때만 추가되며 삭제 후 재시작해도 복구되지 않습니다.
 
 AI 생성 화면의 기준 설정에서 대단원, 단원, 세부 기준을 지정할 수 있습니다.
 컴퓨터일반의 대단원 기본값과 적용 원칙은 [docs/CURRICULUM.md](docs/CURRICULUM.md)에
@@ -48,12 +48,15 @@ AI 생성 화면의 기준 설정에서 대단원, 단원, 세부 기준을 지�
 로컬 개발 시 `.env.example`을 참고해 `.env` 파일에 API 키를 설정합니다.
 
 ```env
-OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_MODEL=gpt-4.1-mini
-OPENAI_VISION_MODEL=gpt-4.1-mini
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.0-flash
-GEMINI_VISION_MODEL=gemini-2.0-flash
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.4-mini
+OPENAI_VISION_MODEL=gpt-5.4-mini
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.8-flash
+GEMINI_VISION_MODEL=gemini-3.8-flash
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=claude-sonnet-5
+ANTHROPIC_VISION_MODEL=claude-sonnet-5
 AI_DEFAULT_PROVIDER=openai
 AI_WORKER_URL=http://127.0.0.1:8001
 AI_WORKER_TIMEOUT_MS=90000
@@ -65,6 +68,35 @@ AI_PROMPT_VERSION=question-v1
 키는 Node 서버와 Python Worker에서만 읽습니다. 브라우저에 공개되는 `VITE_`
 접두사를 API 키에 붙이지 마세요. `PORT`로 웹 포트를, `CBT_DATA_DIR`로 데이터
 폴더를 변경할 수 있습니다. 기존 데이터의 기본 위치는 바뀌지 않습니다.
+
+### AI 제공자 선택 (2026-09-18 확인)
+
+시장 점유율 순위가 아니라 문제 생성·사진 입력·구조화 응답을 지원하는 주요 후보 3종을 선정했습니다.
+기본 모델은 비용과 응답속도를 고려한 선택이며, 모든 회사의 최상위 모델이라는 뜻은 아닙니다.
+
+| 제공자 | 기본 모델 | 공식 근거 |
+| --- | --- | --- |
+| OpenAI | `gpt-5.4-mini` | [모델 기능](https://developers.openai.com/api/docs/models/gpt-5.4-mini) |
+| Google Gemini | `gemini-3.8-flash` | [모델 기능](https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash) |
+| Anthropic Claude | `claude-sonnet-5` | [모델 목록](https://platform.claude.com/docs/en/models/overview) |
+
+사용할 제공자의 키만 입력하면 됩니다. `AI_DEFAULT_PROVIDER`는 `openai`, `gemini`, `anthropic` 중 하나입니다.
+기존 `.env` 값은 기본값보다 우선하므로 이전 모델이 남아 있다면 해당 `*_MODEL`과
+`*_VISION_MODEL` 값을 갱신하고 웹 서버와 Worker를 모두 재시작합니다. 키 값은 브라우저에 반환하거나 저장하지 않습니다.
+빈 키와 `your_` 예시 문자열은 미설정으로 표시합니다. 등록됨 표시는 키 존재 여부이며 유효성·잔액 검증 결과가 아닙니다.
+Claude 추가 시 `python -m pip install -r ai-worker/requirements.txt`로 Worker 의존성을 갱신하세요.
+일반 생성과 사진 인식 모두 세 제공자를 지원합니다. 잘못된 제공자는 다른 회사로 자동 전환하지 않고 오류로 반환합니다.
+
+### 과목 관리
+
+상단 과목 선택과 등록·AI 화면은 아이콘, 문항 수, 풀이 수가 있는 라디오 카드로 선택합니다.
+방향키로 선택하고 상단 팝오버는 Escape로 닫을 수 있습니다. 모의고사 진행 중에는 과목을 바꿀 수 없습니다.
+문제 관리 또는 설정에서 과목 이름을 입력해 삭제를 확인합니다. 해당 과목의 문제, 풀이 기록,
+오답노트, 관련 모의고사 제출 기록을 하나의 DB 트랜잭션으로 영구 삭제하며 다른 과목은 유지합니다.
+삭제 확인 중 문항·풀이·오답노트 개수가 바뀌면 요청을 거부합니다. 현재 브라우저의 임시 시험도 제거됩니다.
+다른 브라우저의 로컬 저장소를 원격 삭제하지는 못하지만 삭제된 과목의 재개·문제 저장은 차단됩니다.
+모든 과목을 삭제해도 관리 화면에서 기본 3과목을 빈 과목으로 다시 추가할 수 있습니다.
+이는 삭제한 기록을 복원하는 기능이 아닙니다. 사용자 정의 과목 추가는 아직 지원하지 않습니다.
 
 ## 로컬 실행
 

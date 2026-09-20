@@ -21,12 +21,16 @@ import {
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { PracticeWorkspace } from "./components/PracticeWorkspace";
+import { SubjectPicker, SubjectsContext } from "./components/SubjectPicker";
+import { SubjectManager } from "./components/SubjectManager";
+import { ApiSettings, ProviderPicker } from "./components/ProviderPicker";
+import { AI_PROVIDERS, providerConfigured } from "@/lib/providers";
 import { QuestionFilterBar, QuestionProgress } from "./components/QuestionOverview";
 import { attemptHistory, emptyFilters, filterQuestions, type QuestionFilters } from "@/lib/study";
 import { parseExamSession } from "@/lib/exam";
 import { getDefaultCriteria, getCurriculum } from "@/lib/curriculum";
 import { EXAM_TYPES } from "@/lib/types";
-import type { AppState, Attempt, ExamType, Question, QuestionDraft, QuestionType, WrongNote } from "@/lib/types";
+import type { AiProvider, AppState, Attempt, ExamType, Question, QuestionDraft, QuestionType, WrongNote } from "@/lib/types";
 import {
   navItem,
   providerStatus,
@@ -43,7 +47,7 @@ import {
 
 const StudyAnalytics = lazy(() => import('./components/StudyAnalytics'));
 
-type ViewKey = "dashboard" | "practice" | "wrong" | "bank" | "import" | "ai";
+type ViewKey = "dashboard" | "practice" | "wrong" | "bank" | "import" | "ai" | "settings";
 
 type ManualForm = {
   examType: ExamType;
@@ -68,7 +72,7 @@ type ImportPreview = {
 };
 
 type AiForm = {
-  provider: "openai" | "gemini";
+  provider: AiProvider;
   examType: ExamType;
   type: QuestionType;
   category: string;
@@ -115,6 +119,7 @@ const navItems: Array<{
   { key: "bank", label: "문제 관리", icon: LibraryBig },
   { key: "import", label: "엑셀 가져오기", icon: FileSpreadsheet },
   { key: "ai", label: "AI 생성", icon: Sparkles },
+  { key: "settings", label: "설정", icon: Settings },
 ];
 
 export default function Home() {
@@ -162,6 +167,11 @@ export default function Home() {
     const response = await fetch(`/api/state?examType=${encodeURIComponent(nextExamType)}`, { cache: "no-store" });
     const nextState = (await response.json()) as AppState;
     if (sequence !== loadSequence.current) return;
+    if (!nextState.subjects.some(subject => subject.active && subject.id === nextExamType)) {
+      try {localStorage.removeItem(`cbt.exam.v1.${nextExamType}`);} catch { /* Storage may be unavailable. */ }
+      setExamLocked(false);
+      setView("bank");
+    }
     setState(nextState);
     setExamType(nextState.examType);
     setActiveQuestionId("");
@@ -171,12 +181,26 @@ export default function Home() {
       ...current,
       examType: nextState.examType,
       provider: nextState.env.defaultProvider,
+      baseQuestionId: "",
       ...getDefaultCriteria(nextState.examType),
     }));
   }
 
   function chooseQuestion(questionId: string) {
     setActiveQuestionId(questionId);
+  }
+
+  function applySubjectState(next: AppState, deleted?: ExamType) {
+    ++loadSequence.current;
+    if (deleted) {
+      try {localStorage.removeItem(`cbt.exam.v1.${deleted}`);} catch { /* Storage may be unavailable. */ }
+    }
+    setState(next); setExamType(next.examType); setExamLocked(false);
+    setActiveQuestionId(""); setFilters(emptyFilters); setSearchTerm("");
+    setImportPreview([]); setGeneratedQuestions([]);
+    setManualForm({...emptyManualForm, examType:next.examType, ...getDefaultCriteria(next.examType)});
+    setAiForm(current => ({...current,examType:next.examType,baseQuestionId:"",...getDefaultCriteria(next.examType)}));
+    setStatusMessage(deleted ? "과목과 학습 데이터를 삭제했습니다." : "빈 과목을 추가했습니다.");
   }
 
   function changeFilters(next: QuestionFilters) {
@@ -200,7 +224,7 @@ export default function Home() {
     }
 
     await saveQuestions([validation.question], "문제를 저장했습니다.");
-    setManualForm(emptyManualForm);
+    setManualForm({...emptyManualForm, examType, ...getDefaultCriteria(examType)});
   }
 
   async function saveQuestions(questions: QuestionDraft[], successMessage: string) {
@@ -221,6 +245,7 @@ export default function Home() {
 
       setState(payload.state);
       setStatusMessage(successMessage);
+      setExamType(payload.state.examType);
 
       if (payload.questions?.[0]?.id) {
         setActiveQuestionId(payload.questions[0].id);
@@ -439,7 +464,9 @@ export default function Home() {
     );
   }
 
+  const hasSubjects = state.subjects.some(subject => subject.active);
   return (
+    <SubjectsContext.Provider value={state.subjects}>
     <main className={ui.layout.app}>
       <aside className={ui.layout.sidebar}>
         <div className={ui.brand.row}>
@@ -458,7 +485,7 @@ export default function Home() {
               <button
                 key={item.key}
                 className={navItem(view === item.key)}
-                disabled={examLocked && item.key !== "practice"}
+                disabled={busy || (examLocked && item.key !== "practice") || (!hasSubjects && item.key !== "bank" && item.key !== "settings")}
                 onClick={() => setView(item.key)}
                 type="button"
               >
@@ -470,20 +497,13 @@ export default function Home() {
         </nav>
 
         <div className={ui.provider.card}>
-          <div className={ui.provider.row}>
+          {AI_PROVIDERS.map(provider => <div className={ui.provider.row} key={provider.id}>
             <CircleDot size={14} />
-            <span>OpenAI</span>
-            <b className={providerStatus(state.env.openaiConfigured)}>
-              {state.env.openaiConfigured ? "ON" : "OFF"}
+            <span>{provider.label}</span>
+            <b className={providerStatus(providerConfigured(state.env,provider.id))}>
+              {providerConfigured(state.env,provider.id) ? "ON" : "OFF"}
             </b>
-          </div>
-          <div className={ui.provider.row}>
-            <CircleDot size={14} />
-            <span>Gemini</span>
-            <b className={providerStatus(state.env.geminiConfigured)}>
-              {state.env.geminiConfigured ? "ON" : "OFF"}
-            </b>
-          </div>
+          </div>)}
         </div>
       </aside>
 
@@ -494,16 +514,10 @@ export default function Home() {
             <h1 className={ui.section.pageTitle}>{navItems.find((item) => item.key === view)?.label}</h1>
           </div>
           <div className={ui.layout.toolbar}>
-            <label className={ui.field.examShell}>
-              <span className={ui.accessibility.srOnly}>시험 종류</span>
-              <select
-                aria-label="시험 종류"
-                disabled={examLocked}
-                className={ui.field.examSelect}
-                value={examType}
-                onChange={(event) => {
-                  const nextExamType = event.target.value as ExamType;
+            <SubjectPicker compact value={examType} disabled={examLocked || busy}
+                onChange={(nextExamType) => {
                   setExamType(nextExamType);
+                  setImportPreview([]); setGeneratedQuestions([]); setSearchTerm("");
                   setManualForm((current) => ({
                     ...current,
                     examType: nextExamType,
@@ -511,18 +525,11 @@ export default function Home() {
                   }));
                   setAiForm((current) => ({
                     ...current,
+                    baseQuestionId: "",
                     examType: nextExamType,
                     ...getDefaultCriteria(nextExamType),
                   }));
-                }}
-              >
-                {EXAM_TYPES.map((exam) => (
-                  <option key={exam.id} value={exam.id}>
-                    {exam.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+                }} />
             <label className={ui.field.searchShell}>
               <Search size={16} />
               <input
@@ -536,7 +543,7 @@ export default function Home() {
             <button className={ui.button.icon} disabled={examLocked} onClick={() => void loadState()} title="새로고침" type="button">
               <RefreshCw size={17} />
             </button>
-            <button className={ui.button.icon} title="설정" type="button">
+            <button className={ui.button.icon} title="설정" type="button" disabled={examLocked || busy} onClick={() => setView("settings")}>
               <Settings size={17} />
             </button>
           </div>
@@ -551,11 +558,13 @@ export default function Home() {
           </div>
         ) : null}
 
-        {view === "dashboard" ? (
+        {(view === "bank" || view === "settings" || !hasSubjects) && <SubjectManager subjects={state.subjects} disabled={busy || examLocked} onChange={applySubjectState} />}
+        {view === "settings" && <ApiSettings env={state.env} />}
+        {hasSubjects && view === "dashboard" ? (
           <DashboardView state={state} onStart={() => setView("practice")} />
         ) : null}
 
-        {view === "practice" ? (
+        {hasSubjects && view === "practice" ? (
           <PracticeWorkspace
             key={state.examType}
             examType={state.examType}
@@ -573,7 +582,7 @@ export default function Home() {
           />
         ) : null}
 
-        {view === "wrong" ? (
+        {hasSubjects && view === "wrong" ? (
           <WrongNotesView
             questions={state.questions}
             wrongNotes={state.wrongNotes}
@@ -588,7 +597,7 @@ export default function Home() {
           />
         ) : null}
 
-        {view === "bank" ? (
+        {hasSubjects && view === "bank" ? (
           <QuestionBankView
             busy={busy}
             questions={state.questions}
@@ -606,7 +615,7 @@ export default function Home() {
           />
         ) : null}
 
-        {view === "import" ? (
+        {hasSubjects && view === "import" ? (
           <ImportView
             busy={busy}
             preview={importPreview}
@@ -615,7 +624,7 @@ export default function Home() {
           />
         ) : null}
 
-        {view === "ai" ? (
+        {hasSubjects && view === "ai" ? (
           <AiGenerateView
             aiMode={aiMode}
             busy={busy}
@@ -639,6 +648,7 @@ export default function Home() {
         ) : null}
       </section>
     </main>
+    </SubjectsContext.Provider>
   );
 }
 
@@ -798,14 +808,14 @@ function QuestionBankView({
       <section className={ui.panel.surface}>
         <PanelHeader title="문제 등록" icon={Plus} />
         <div className={ui.layout.fieldGrid}>
-          <SelectField
+          <SubjectPicker
             label="시험 종류"
+            disabled={busy}
             value={form.examType}
             onChange={(value) => {
               const nextExamType = value as ExamType;
               setForm({ ...form, examType: nextExamType, ...getDefaultCriteria(nextExamType) });
             }}
-            options={EXAM_TYPES.map((exam): [string, string] => [exam.id, exam.label])}
           />
           <SelectField
             label="유형"
@@ -1072,24 +1082,16 @@ function PhotoImportView({
       <section className={ui.panel.surface}>
         <PanelHeader title="문제집 사진 인식" icon={ImagePlus} />
         <div className={ui.layout.fieldGrid}>
-          <SelectField
+          <SubjectPicker
             label="시험 종류"
+            disabled={busy}
             value={form.examType}
             onChange={(value) => {
               const nextExamType = value as ExamType;
               setForm({ ...form, examType: nextExamType, ...getDefaultCriteria(nextExamType) });
             }}
-            options={EXAM_TYPES.map((exam): [string, string] => [exam.id, exam.label])}
           />
-          <SelectField
-            label="Provider"
-            value={form.provider}
-            onChange={(value) => setForm({ ...form, provider: value as "openai" | "gemini" })}
-            options={[
-              ["openai", `OpenAI · ${env.openaiModel}`],
-              ["gemini", `Gemini · ${env.geminiModel}`],
-            ]}
-          />
+          <ProviderPicker value={form.provider} env={env} disabled={busy} onChange={provider => setForm({...form,provider})} />
           <CriteriaFields form={form} setForm={setForm} />
           <TextField label="카테고리" value={form.category} onChange={(value) => setForm({ ...form, category: value })} />
           <TextField label="난이도" value={form.difficulty} onChange={(value) => setForm({ ...form, difficulty: value })} />
@@ -1240,21 +1242,13 @@ function LegacyAiGenerateView({
       <section className={ui.panel.surface}>
         <PanelHeader title="AI 생성" icon={Brain} />
         <div className={ui.layout.fieldGrid}>
-          <SelectField
+          <SubjectPicker
             label="시험 종류"
+            disabled={busy}
             value={form.examType}
-            onChange={(value) => setForm({ ...form, examType: value as ExamType })}
-            options={EXAM_TYPES.map((exam): [string, string] => [exam.id, exam.label])}
+            onChange={value => setForm({ ...form, examType: value, baseQuestionId: "", ...getDefaultCriteria(value) })}
           />
-          <SelectField
-            label="Provider"
-            value={form.provider}
-            onChange={(value) => setForm({ ...form, provider: value as "openai" | "gemini" })}
-            options={[
-              ["openai", `OpenAI · ${env.openaiModel}`],
-              ["gemini", `Gemini · ${env.geminiModel}`],
-            ]}
-          />
+          <ProviderPicker value={form.provider} env={env} disabled={busy} onChange={provider => setForm({...form,provider})} />
           <CriteriaFields form={form} setForm={setForm} />
           <SelectField
             label="유형"

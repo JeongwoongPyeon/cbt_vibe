@@ -1,8 +1,11 @@
 import { normalizeExamType } from "@/lib/validation";
+import { assertSubjectActive } from "@/lib/db";
+import { resolveProvider } from "@/lib/providers";
 
 export async function POST(request: Request) {
   try {
     const incoming = await request.formData();
+    assertSubjectActive(normalizeExamType(incoming.get("examType")));
     const images = incoming.getAll("images").filter((value): value is File => value instanceof File);
 
     if (images.length === 0) {
@@ -14,7 +17,7 @@ export async function POST(request: Request) {
       form.append("images", image, image.name);
     }
 
-    form.set("provider", incoming.get("provider") === "gemini" ? "gemini" : "openai");
+    form.set("provider", resolveProvider(incoming.get("provider"), process.env.AI_DEFAULT_PROVIDER || "openai"));
     form.set("examType", normalizeExamType(incoming.get("examType")));
     form.set("category", String(incoming.get("category") || ""));
     form.set("part", String(incoming.get("part") || ""));

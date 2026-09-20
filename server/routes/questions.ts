@@ -1,4 +1,4 @@
-import { getAppState, insertQuestion } from "@/lib/db";
+import { assertSubjectActive, getAppState, insertQuestion } from "@/lib/db";
 import type { DraftValidation } from "@/lib/types";
 import { validateQuestionDraft } from "@/lib/validation";
 
@@ -16,6 +16,11 @@ export async function POST(request: Request) {
     return Response.json({ errors }, { status: 400 });
   }
 
+  try {
+    for (const validation of validations) assertSubjectActive(validation.question.examType);
+  } catch (error) {
+    return Response.json({errors: [error instanceof Error ? error.message : "과목을 확인해 주세요."]}, {status: 409});
+  }
   const questions = validations.map((validation: DraftValidation) =>
     insertQuestion(validation.question),
   );

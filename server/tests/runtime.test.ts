@@ -60,8 +60,12 @@ test("production serves built assets and fonts, without exposing backend files",
       if (asset.endsWith(".js")) {
         const code = readFileSync(path.join("dist/client/assets", asset), "utf8");
         assert.ok(!code.includes("node:sqlite"));
-        assert.ok(!code.includes("OPENAI_API_KEY"));
-        assert.ok(!code.includes("GEMINI_API_KEY"));
+        // Settings may show environment variable names, never server reads or values.
+        for (const key of ["OPENAI_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY"]) {
+          assert.ok(!code.includes(`process.env.${key}`));
+          const secret = process.env[key];
+          if (secret && secret.length >= 12) assert.ok(!code.includes(secret));
+        }
       }
     }
     for (const route of ["/.env", "/local-data/cbt.sqlite", "/lib/db.ts", "/server/app.ts", "/assets/missing.js", "/api/unknown"]) {

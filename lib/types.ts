@@ -13,6 +13,16 @@ export const EXAM_TYPES = [
 ] as const;
 
 export type ExamType = (typeof EXAM_TYPES)[number]["id"];
+export type AiProvider = "openai" | "gemini" | "anthropic";
+
+export interface SubjectSummary {
+  id: ExamType;
+  label: string;
+  active: boolean;
+  questions: number;
+  attempts: number;
+  wrongNotes: number;
+}
 
 export function isExamType(value: unknown): value is ExamType {
   return EXAM_TYPES.some((exam) => exam.id === value);
@@ -127,12 +137,15 @@ export interface AppStats {
 export interface EnvStatus {
   openaiConfigured: boolean;
   geminiConfigured: boolean;
+  anthropicConfigured: boolean;
   openaiModel: string;
   geminiModel: string;
-  defaultProvider: "openai" | "gemini";
+  anthropicModel: string;
+  defaultProvider: AiProvider;
 }
 
 export interface AppState {
+  subjects: SubjectSummary[];
   examType: ExamType;
   questions: Question[];
   attempts: Attempt[];

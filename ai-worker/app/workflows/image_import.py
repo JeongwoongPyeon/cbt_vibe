@@ -64,7 +64,9 @@ def _build_image_parts(
     parts: list[dict[str, object]] = []
     for _filename, mime_type, data in images:
         encoded = base64.b64encode(data).decode("ascii")
-        if provider == "gemini":
+        if provider == "anthropic":
+            parts.append({"type": "image", "source": {"type": "base64", "media_type": mime_type, "data": encoded}})
+        elif provider == "gemini":
             parts.append({"type": "media", "data": encoded, "mime_type": mime_type})
         else:
             parts.append({"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{encoded}"}})
@@ -77,8 +79,8 @@ async def import_image_questions(
     settings: Settings,
 ) -> GenerateQuestionsResponse:
     provider = request.provider or settings.default_provider
-    if provider not in {"openai", "gemini"}:
-        provider = "openai"
+    if provider not in {"openai", "gemini", "anthropic"}:
+        raise ValueError("지원하지 않는 AI 제공자입니다.")
 
     uploaded = await _read_images(images)
     run_id = f"run_{uuid.uuid4().hex}"

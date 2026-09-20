@@ -25,6 +25,7 @@ worker.post("/v1/workflows/questions/import-images", async (c) => {
   const body = await c.req.formData();
   const files = body.getAll("images") as File[];
   workerRequests.push({ path: c.req.path, body: {
+    provider: body.get("provider"),
     examType: body.get("examType"), part: body.get("part"), unit: body.get("unit"),
     topic: body.get("topic"), maxQuestions: body.get("maxQuestions"),
     files: await Promise.all(files.map(async (file) => ({ name: file.name, text: await file.text() }))),
@@ -168,4 +169,36 @@ test("reject cross-origin requests, foreign hosts and oversized bodies", async (
   assert.equal(tooLarge.status, 413);
   assert.equal((await fetch(`${url}/api/unknown`)).status, 404);
   assert.equal((await fetch(`${url}/api/questions`)).status, 404);
+});
+
+test("all three AI providers are forwarded for generation and images without key exposure", async () => {
+  process.env.ANTHROPIC_API_KEY = "test-anthropic-private-key";
+  for (const provider of ["openai", "gemini", "anthropic"]) {
+    assert.equal((await jsonRequest("/api/ai/generate", {provider,examType:"ncs"})).status,200);
+    assert.equal((workerRequests.at(-1)!.body as {provider:string}).provider,provider);
+    const form = new FormData();
+    form.set("provider",provider); form.set("examType","ncs");
+    form.append("images",new File(["fake-png"],"test.png",{type:"image/png"}));
+    assert.equal((await fetch(`${url}/api/ai/import-images`,{method:"POST",body:form})).status,200);
+    assert.equal((workerRequests.at(-1)!.body as {provider:string}).provider,provider);
+  }
+  const count = workerRequests.length;
+  assert.equal((await jsonRequest("/api/ai/generate",{provider:"unknown"})).status,400);
+  assert.equal(workerRequests.length,count);
+  const previous=process.env.AI_DEFAULT_PROVIDER;
+  process.env.AI_DEFAULT_PROVIDER="anthropic";
+  try {
+    assert.equal((await jsonRequest("/api/ai/generate",{})).status,200);
+    assert.equal((workerRequests.at(-1)!.body as {provider:string}).provider,"anthropic");
+    const state=await (await fetch(`${url}/api/state`)).json();
+    assert.equal(state.env.anthropicConfigured,true);
+    assert.equal(state.env.defaultProvider,"anthropic");
+    assert.ok(!JSON.stringify(state).includes(process.env.ANTHROPIC_API_KEY));
+    process.env.ANTHROPIC_API_KEY="your_anthropic_api_key_here";
+    const empty=await (await fetch(`${url}/api/state`)).json();
+    assert.equal(empty.env.anthropicConfigured,false);
+  } finally {
+    delete process.env.ANTHROPIC_API_KEY;
+    if(previous===undefined) delete process.env.AI_DEFAULT_PROVIDER; else process.env.AI_DEFAULT_PROVIDER=previous;
+  }
 });

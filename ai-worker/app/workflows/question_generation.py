@@ -33,8 +33,8 @@ async def generate_questions(
     settings: Settings,
 ) -> GenerateQuestionsResponse:
     provider = request.provider or settings.default_provider
-    if provider not in {"openai", "gemini"}:
-        provider = "openai"
+    if provider not in {"openai", "gemini", "anthropic"}:
+        raise ValueError("지원하지 않는 AI 제공자입니다.")
 
     run_id = f"run_{uuid.uuid4().hex}"
     model, model_name = create_structured_model(provider, settings)

@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 ExamType = Literal["ncs", "computer_general", "information_security"]
 QuestionType = Literal["multiple_choice_4", "multiple_choice_5", "short_answer"]
 ImportQuestionType = Literal["auto", "multiple_choice_4", "multiple_choice_5", "short_answer"]
-Provider = Literal["openai", "gemini"]
+Provider = Literal["openai", "gemini", "anthropic"]
 
 
 class QuestionDraft(BaseModel):
