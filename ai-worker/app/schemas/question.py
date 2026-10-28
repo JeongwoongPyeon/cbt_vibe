@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-ExamType = Literal["ncs", "computer_general", "information_security"]
+ExamType = Literal["ncs", "computer_general", "information_security", "krc_business"]
 QuestionType = Literal["multiple_choice_4", "multiple_choice_5", "short_answer"]
 ImportQuestionType = Literal["auto", "multiple_choice_4", "multiple_choice_5", "short_answer"]
 Provider = Literal["openai", "gemini", "anthropic"]

@@ -10,6 +10,7 @@ export const EXAM_TYPES = [
   { id: "ncs", label: "NCS" },
   { id: "computer_general", label: "컴퓨터일반" },
   { id: "information_security", label: "정보보호론" },
+  { id: "krc_business", label: "한국농어촌공사 경상" },
 ] as const;
 
 export type ExamType = (typeof EXAM_TYPES)[number]["id"];

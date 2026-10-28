@@ -15,6 +15,7 @@ import type {
   SubjectSummary,
 } from "./types";
 import { EXAM_TYPES } from "./types";
+import { krcBusinessQuestions } from "./krc-business-questions";
 import { AI_PROVIDERS, resolveProvider } from "./providers";
 import { normalizeExamType, normalizeForCompare, parseJsonList } from "./validation";
 import type { ExamSubmission } from "./exam";
@@ -186,10 +187,20 @@ function initializeDb(db: DatabaseSync): void {
     }
   }
 
-  const newSubjects = EXAM_TYPES.filter(({ id }) =>
-    db.prepare("INSERT OR IGNORE INTO subjects (id) VALUES (?)").run(id).changes > 0,
-  ).map(({ id }) => id);
-  seedQuestions(db, newSubjects);
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const newSubjects = EXAM_TYPES.filter(({ id }) =>
+      db.prepare("INSERT OR IGNORE INTO subjects (id) VALUES (?)").run(id).changes > 0,
+    ).map(({ id }) => id);
+    seedQuestions(db, newSubjects);
+    if (newSubjects.includes("krc_business")) {
+      for (const question of krcBusinessQuestions) insertQuestion(question, db);
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 function seedQuestions(db: DatabaseSync, newSubjects: ExamType[]): void {

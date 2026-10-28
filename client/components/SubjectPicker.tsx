@@ -2,6 +2,7 @@ import { createContext, useContext, useId, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import {
   BookOpen,
+  Landmark,
   CheckCircle2,
   ChevronsUpDown,
   Monitor,
@@ -15,6 +16,7 @@ export const subjectIcons = {
   ncs: BookOpen,
   computer_general: Monitor,
   information_security: ShieldCheck,
+  krc_business: Landmark,
 };
 
 export function SubjectPicker({

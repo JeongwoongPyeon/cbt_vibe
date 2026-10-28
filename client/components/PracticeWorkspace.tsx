@@ -76,7 +76,7 @@ export function PracticeWorkspace(props: Props) {
       return null;
     }
   });
-  const [mode, setMode] = useState<"study" | "exam">(
+  const [mode, setMode] = useState<"study" | "exam" | "learn">(
     session ? "exam" : "study",
   );
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -163,7 +163,7 @@ export function PracticeWorkspace(props: Props) {
   }, [running]);
   useEffect(() => {
     startedAt.current = Date.now();
-  }, [current?.id]);
+  }, [current?.id, mode]);
   useEffect(() => {
     if (confirmSubmit) dialog.current?.showModal();
     else dialog.current?.close();
@@ -195,7 +195,7 @@ export function PracticeWorkspace(props: Props) {
   }
 
   function changeAnswer(value: string) {
-    if (!current || frozen || result) return;
+    if (!current || frozen || result || mode === "learn") return;
     if (session) {
       if (Date.now() >= session.deadline) {
         setNow(Date.now());
@@ -209,7 +209,7 @@ export function PracticeWorkspace(props: Props) {
   }
 
   async function grade() {
-    if (!current || !answer.trim() || result || submitting.current) return;
+    if (!current || mode !== "study" || !answer.trim() || result || submitting.current) return;
     submitting.current = true;
     setBusy(true);
     setError("");
@@ -311,6 +311,20 @@ export function PracticeWorkspace(props: Props) {
     <div className={ui.study.workspace}>
       <div className={ui.study.row}>
         <div className={ui.layout.tabBar} role="tablist" aria-label="풀이 모드">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "learn"}
+            className={tabButton(mode === "learn")}
+            disabled={running || busy}
+            onClick={() => {
+              setMode("learn");
+              persist(null);
+              setError("");
+            }}
+          >
+            <BookOpen size={16} />해설 학습
+          </button>
           <button
             type="button"
             role="tab"
@@ -520,7 +534,7 @@ export function PracticeWorkspace(props: Props) {
                       .join(" / ") || "단원 미지정"}
                   </p>
                   <h2 className={ui.study.question}>{current.stem}</h2>
-                  {current.type === "short_answer" ? (
+                  {current.type === "short_answer" ? (mode === "learn" ? null : (
                     <label className={ui.field.group}>
                       <span className={ui.field.label}>답안</span>
                       <input
@@ -531,13 +545,18 @@ export function PracticeWorkspace(props: Props) {
                         placeholder="답안 입력"
                       />
                     </label>
-                  ) : (
+                  )) : (
                     <div
                       className={ui.list.answerChoices}
                       role="group"
                       aria-label="답안 선택"
                     >
-                      {current.choices.map((choice, i) => (
+                      {current.choices.map((choice, i) => mode === "learn" ? (
+                        <div key={`${i}-${choice}`} className={answerChoice(current.answer === choice)}>
+                          <span className={ui.answerChoice.marker}>{i + 1}</span>
+                          <span className={ui.text.question}>{choice}{current.answer === choice ? " · 정답" : ""}</span>
+                        </div>
+                      ) : (
                         <button
                           type="button"
                           key={`${i}-${choice}`}
@@ -554,15 +573,15 @@ export function PracticeWorkspace(props: Props) {
                       ))}
                     </div>
                   )}
-                  {result && (
+                  {(result || mode === "learn") && (
                     <div
-                      className={feedbackBanner(result.isCorrect)}
+                      className={mode === "learn" ? ui.study.reading : feedbackBanner(result!.isCorrect)}
                       role="status"
                     >
                       <strong>
-                        {result.isCorrect
+                        {mode === "learn" ? "정답 · 해설" : result!.isCorrect
                           ? "정답"
-                          : result.selectedAnswer.trim()
+                          : result!.selectedAnswer.trim()
                             ? "오답"
                             : "미응답 · 오답"}
                       </strong>
@@ -643,7 +662,7 @@ export function PracticeWorkspace(props: Props) {
                       <ArrowRight size={18} />
                     </button>
                   </div>
-                  {mode === "study" && (
+                  {mode !== "exam" && (
                     <section className={ui.study.related} aria-label="유사문제">
                       <div className={ui.study.row}>
                         <h3 className={ui.study.heading}>유사문제</h3>

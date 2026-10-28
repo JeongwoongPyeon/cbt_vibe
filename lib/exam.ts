@@ -74,7 +74,7 @@ export function freezeSubmission(
 
 const storedSessionSchema = z.object({
   id: z.string().uuid(),
-  examType: z.enum(["ncs", "computer_general", "information_security"]),
+  examType: z.enum(["ncs", "computer_general", "information_security", "krc_business"]),
   questionIds: z.array(z.string()).min(1).max(100),
   activeId: z.string(),
   answers: z.record(z.string(), z.string()),
@@ -96,7 +96,7 @@ const storedSessionSchema = z.object({
       z.object({
         id: z.string(),
         questionId: z.string(),
-        examType: z.enum(["ncs", "computer_general", "information_security"]),
+        examType: z.enum(["ncs", "computer_general", "information_security", "krc_business"]),
         selectedAnswer: z.string(),
         isCorrect: z.boolean(),
         elapsedSeconds: z.number(),

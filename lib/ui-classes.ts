@@ -39,6 +39,7 @@ export const ui = {
     table: "w-full text-left text-sm [&_th]:p-2 [&_td]:p-2 [&_tr]:border-b [&_tr]:border-hairline",
   },
   study: {
+    reading: "mt-5 border-t-2 border-primary/30 bg-primary/5 p-4 text-ink",
     workspace: "flex min-w-0 flex-col gap-4",
     toolbar: "flex flex-wrap items-end gap-3 border-b border-hairline pb-4",
     filter: "flex min-w-0 flex-1 basis-36 flex-col gap-1.5",
