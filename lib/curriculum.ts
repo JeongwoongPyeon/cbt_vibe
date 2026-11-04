@@ -47,7 +47,7 @@ export const CURRICULUMS: Record<string, CurriculumPart[]> = {
   ncs: ncsParts,
   computer_general: computerGeneralParts,
   information_security: securityParts,
-  krc_business: [part("business", "경영학원론"), part("accounting-finance", "회계·재무")],
+  krc_business: [part("business", "가이드북 · 경영학원론"), part("accounting-finance", "가이드북 · 회계·재무")],
 };
 
 export function getCurriculum(examType: string): CurriculumPart[] {

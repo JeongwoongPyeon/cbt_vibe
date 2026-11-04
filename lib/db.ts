@@ -193,8 +193,14 @@ function initializeDb(db: DatabaseSync): void {
       db.prepare("INSERT OR IGNORE INTO subjects (id) VALUES (?)").run(id).changes > 0,
     ).map(({ id }) => id);
     seedQuestions(db, newSubjects);
-    if (newSubjects.includes("krc_business")) {
-      for (const question of krcBusinessQuestions) insertQuestion(question, db);
+    db.exec("CREATE TABLE IF NOT EXISTS content_updates (id TEXT PRIMARY KEY)");
+    if (!db.prepare("SELECT 1 FROM content_updates WHERE id = ?").get("krc-guidebook-v2")) {
+      const legacy = db.prepare(`SELECT 1 FROM questions q JOIN subjects s ON s.id = q.exam_type
+        WHERE s.id = 'krc_business' AND s.active = 1 AND q.source_note LIKE 'KRC 창작 40 v1 ·%' LIMIT 1`).get();
+      if (newSubjects.includes("krc_business") || legacy) {
+        for (const question of krcBusinessQuestions) insertQuestion(question, db);
+      }
+      db.prepare("INSERT INTO content_updates (id) VALUES (?)").run("krc-guidebook-v2");
     }
     db.exec("COMMIT");
   } catch (error) {
